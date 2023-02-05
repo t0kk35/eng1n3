@@ -14,7 +14,7 @@ from typing import Tuple, List, Dict
 
 from f3atur3s import Feature, FeatureGrouper
 
-from eng1n3.pandas.dataframebuilder import FeatureProcessor
+from ..dataframebuilder import FeatureProcessor
 from ...profile.profilenumpy import profile_time_logic, profile_aggregate, profile_contrib, ProfileNumpy
 from ..common.data import pandas_type
 

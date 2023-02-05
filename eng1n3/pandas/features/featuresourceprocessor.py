@@ -13,7 +13,7 @@ from f3atur3s import FeatureHelper
 
 from ..common.data import pandas_type
 from ..helpers.validation import EnginePandasValidation
-from eng1n3.pandas.dataframebuilder import FeatureProcessor
+from ..dataframebuilder import FeatureProcessor
 
 
 logger = logging.getLogger(__name__)
@@ -33,21 +33,22 @@ class FeatureSourceProcessor(FeatureProcessor[FeatureSource]):
             feature.name: pandas_type(feature, read=True) for feature in self.features
         }
         date_features: List[FeatureSource] = FeatureHelper.filter_feature_type(FeatureTypeTimeBased, self.features)
-        date_feature_names = [f.name for f in date_features]
+        # date_feature_names = [f.name for f in date_features]
         # Set up some specifics for the date/time parsing
-        date_parser = self._set_up_date_parser(date_features)
-        infer_datetime_format = True if date_parser is None else True
+        # date_parser = self._set_up_date_parser(date_features)
+        # infer_datetime_format = True if date_parser is None else True
 
         df = pd.read_csv(
             self._file,
             sep=self._delimiter,
             usecols=source_feature_names,
             dtype=source_feature_types,
-            quotechar=self._quote,
-            parse_dates=date_feature_names,
-            date_parser=date_parser,
-            infer_datetime_format=infer_datetime_format
+            quotechar=self._quote
         )
+
+        # Reparse the date features. Make sure they become pd.DateTime
+        for feature in date_features:
+            df[feature.name] = pd.to_datetime(df[feature.name], format=feature.format_code)
 
         # Apply defaults for source data fields of type 'CATEGORICAL'
         for feature in self.features:
@@ -57,35 +58,3 @@ class FeatureSourceProcessor(FeatureProcessor[FeatureSource]):
                         df[feature.name] = df[feature.name].cat.add_categories(feature.default)
                 df[feature.name].fillna(feature.default, inplace=True)
         return df
-
-    def _set_up_date_parser(self, date_features: List[FeatureSource]) -> Optional[partial]:
-        """
-        Helper function to which sets-up a data parser for a specific format. The date parser is used by the pandas
-        read_csv function.
-
-        Args:
-             date_features: (List[FeaturesSource]) the Features of type date which need to be read
-
-        Returns:
-            A function (the date parser) or none if there were no explicitly defined formats
-        """
-        if len(date_features) != 0:
-            format_codes = list(set([d.format_code for d in date_features]))
-            EnginePandasValidation.val_single_date_format_code(format_codes)
-            return partial(self._parse_dates, format_code=format_codes[0])
-        else:
-            return None
-
-    @staticmethod
-    def _parse_dates(dates: List[str], format_code: str) -> List[dt.datetime]:
-        """
-        Helper function to parse datetime structures from strings
-
-        Args:
-            dates: A list of dates to parse (as string)
-            format_code: The format code to apply
-
-        Returns:
-             List of datetime type values
-        """
-        return [dt.datetime.strptime(d, format_code) for d in dates]

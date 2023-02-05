@@ -5,9 +5,9 @@ Feature Processor for the creation of FeatureOneHot features.
 import pandas as pd
 from typing import List
 
-from eng1n3.pandas.dataframebuilder import FeatureProcessor
-
 from f3atur3s import Feature, FeatureOneHot
+
+from ..dataframebuilder import FeatureProcessor
 
 
 class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):

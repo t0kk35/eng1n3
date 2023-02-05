@@ -3,6 +3,10 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureSource usage
 (c) 2020 d373c7
 """
 import unittest
+
+import numpy as np
+import pandas as pd
+
 import f3atur3s as ft
 
 import eng1n3.pandas.pandasengine as en
@@ -13,12 +17,10 @@ FILES_DIR = './files/'
 class TestReading(unittest.TestCase):
     """Base Reading Tests
     """
-    fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL)
     features = [
-        (ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d'), 'DateTime'),
-        (ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT), 'Float'),
-        (ft.FeatureSource('Card', ft.FEATURE_TYPE_STRING), 'String'),
-        (fc, 'Categorical')
+        (ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d'), 'DateTime', np.dtype('datetime64[ns]')),
+        (ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT), 'Float', np.dtype('float64')),
+        (ft.FeatureSource('Card', ft.FEATURE_TYPE_STRING), 'String', np.dtype('object')),
     ]
 
     def test_creation_base(self):
@@ -30,41 +32,57 @@ class TestReading(unittest.TestCase):
     def test_read_base_single(self):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
-            for f, d in TestReading.features:
+            for f, d, t in TestReading.features:
                 td = ft.TensorDefinition(d, [f])
                 df = e.from_csv(td, file, inference=False)
                 self.assertEqual(len(df.columns), 1, f'Expected a one column panda for read test {d}')
                 self.assertEqual(df.columns[0], f.name, f'Wrong panda column for read test {d}. Got {df.columns[0]}')
+                self.assertEqual(df[f.name].dtype, t, f'Unexpected type. Got <{df[f.name].dtype}>. Expected <{t}> ')
                 self.assertEqual(td.inference_ready, True, 'TensorDefinition Should have been ready for inference')
 
     def test_read_base_all(self):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
-            td = ft.TensorDefinition('All', [f for f, d in TestReading.features])
+            td = ft.TensorDefinition('All', [f for f, d, t in TestReading.features])
             df = e.from_csv(td, file, inference=False)
             self.assertEqual(len(df.columns), len(TestReading.features),
                              f'Incorrect number of columns for read all test. got {len(df.columns)}')
-            for (f, _), c in zip(TestReading.features, df.columns):
-                self.assertEqual(f.name, c, f'Incorrect column name in read test all got {c}, expected {f.name}')
+            for i, (f, _, t) in enumerate(TestReading.features):
+                self.assertEqual(f.name, df.columns[i], f'Incorrect column name got {df.columns[i]}, expected {f.name}')
+                self.assertEqual(t, df[f.name].dtype, f'Unexpected type. Got <{df[f.name].dtype}>. Expected <{t}> ')
 
     def test_read_base_all_non_def_delimiter(self):
         file = FILES_DIR + 'engine_test_base_pipe.csv'
         with en.EnginePandas(num_threads=1) as e:
-            df = e.from_csv(ft.TensorDefinition('All', [f for f, d in TestReading.features]),
+            df = e.from_csv(ft.TensorDefinition('All', [f for f, d, t in TestReading.features]),
                             file, inference=False, delimiter='|')
             self.assertEqual(len(df.columns), len(TestReading.features),
                              f'Incorrect number of columns for read all test. got {len(df.columns)}')
-            for (f, _), c in zip(TestReading.features, df.columns):
+            for (f, _, t), c in zip(TestReading.features, df.columns):
                 self.assertEqual(f.name, c, f'Incorrect column name in read test all got {c}, expected {f.name}')
 
-    # TODO need test with multiple source features that are dates. There was an iterator problem?
+    def test_read_base_non_existent_column_bad(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        f = ft.FeatureSource('IDontExist', ft.FEATURE_TYPE_STRING)
+        with en.EnginePandas(num_threads=1) as e:
+            td = ft.TensorDefinition('All', [f])
+            with self.assertRaises(ValueError):
+                _ = e.from_csv(td, file, inference=False)
 
 
 class TestDate(unittest.TestCase):
     """
     Some date specific tests
     """
-    pass
+    def test_bad_format(self):
+        f = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='bad')
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        with en.EnginePandas(num_threads=1) as e:
+            td = ft.TensorDefinition('All', [f])
+            with self.assertRaises(ValueError):
+                _ = e.from_csv(td, file, inference=False)
+
+    # TODO need test with multiple source features that are dates. There was an iterator problem?
 
 
 class TestCategorical(unittest.TestCase):
@@ -77,6 +95,7 @@ class TestCategorical(unittest.TestCase):
         with en.EnginePandas(num_threads=1) as e:
             df = e.from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
             self.assertEqual(df.dtypes[0], 'category', 'Source with f_type should be categorical')
+            self.assertListEqual(df[fc.name].unique().dropna().tolist(), list(df.dtypes[0].categories))
 
     def test_categorical_default(self):
         default = 'DEF'
@@ -85,7 +104,9 @@ class TestCategorical(unittest.TestCase):
         with en.EnginePandas(num_threads=1) as e:
             df = e.from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
             self.assertEqual(fc.default, default, f'Default incorrect. Got {fc.default}')
+            self.assertEqual(df.dtypes[0], 'category', 'Source with f_type should be categorical')
             self.assertIn(default, list(df['MCC']), f'Default not found in Panda')
+            self.assertIn(default, list(df.dtypes[0].categories), f'Pandas column categories should contain default ')
 
 
 def main():
