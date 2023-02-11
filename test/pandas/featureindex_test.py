@@ -73,7 +73,7 @@ class TestIndex(unittest.TestCase):
                 sorted([fi, fc], key=lambda x: x.name), f'Embedded features should be fi and fc'
             )
 
-    def test_read_remove_element(self):
+    def test_inference_read_remove_element(self):
         # If a value of an index feature is present in NON Inference mode, and it is not present during inference,
         # then that value should not be used, but present in the dictionary. If the first line of the
         # inference file is deleted, the value '1' should be missing.
@@ -114,7 +114,7 @@ class TestIndex(unittest.TestCase):
 
         remove_file_if_exists(file2)
 
-    def test_read_add_element(self):
+    def test_inference_read_add_element(self):
         # If and index value is present in the file when running in inference, but it was not in NON inference, then
         # the default 0 value should be assigned.
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')

@@ -6,7 +6,7 @@ import pandas as pd
 from typing import Dict, Type, List
 
 from f3atur3s import Feature, FeatureHelper, FeatureSource, FeatureOneHot, FeatureIndex, FeatureBin, FeatureGrouper
-from f3atur3s import FeatureConcat, FeatureExpression, FeatureRatio
+from f3atur3s import FeatureConcat, FeatureExpression, FeatureRatio, FeatureNormalizeScale, FeatureNormalizeStandard
 
 from eng1n3.pandas.common.exception import EnginePandasException
 
@@ -19,6 +19,8 @@ from .features.featurebinprocessor import FeatureBinProcessor
 from .features.featureconcatprocessor import FeatureConcatProcessor
 from .features.featureexpressionprocessor import FeatureExpressionProcessor
 from .features.featureratioprocessor import FeatureRatioProcessor
+from .features.featurenormalizescaleprocessor import FeatureNormalizeScaleProcessor
+from .features.featurenormalizestandardprocessor import FeatureNormalizeStandardProcessor
 
 
 class DataFrameBuilder:
@@ -39,6 +41,8 @@ class DataFrameBuilder:
         self._feature_processors[FeatureConcat] = FeatureConcatProcessor(features, inference)
         self._feature_processors[FeatureExpression] = FeatureExpressionProcessor(features, inference)
         self._feature_processors[FeatureRatio] = FeatureRatioProcessor(features, inference)
+        self._feature_processors[FeatureNormalizeScale] = FeatureNormalizeScaleProcessor(features, inference)
+        self._feature_processors[FeatureNormalizeStandard] = FeatureNormalizeStandardProcessor(features, inference)
         self._feature_processors[FeatureGrouper] = FeatureGrouperProcessor(
             features, num_threads, time_feature, inference
         )

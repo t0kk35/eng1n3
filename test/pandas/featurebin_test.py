@@ -97,7 +97,7 @@ class TestFeatureBin(unittest.TestCase):
             _ = e.from_csv(td_d, file1, inference=False)
             self.assertEqual(fb.inference_ready, True, f'Bin Feature should have been ready for inference')
             self.assertEqual(td_d.inference_ready, True, f'TensorDefinition should have been ready for inference')
-            # Now remove a line and run in inference mode
+            # Now run inference mode on file w/removed line
             df_1 = e.from_csv(td_d, file2, inference=True)
             bin_v = df_1[bin_name].unique()
             # Should not have a 0 bin. As we removed the 0.0 amount
@@ -196,6 +196,7 @@ class TestFeatureBin(unittest.TestCase):
             self.assertEqual(df.iloc[:, 0].dtype.name, 'category', f'Expecting a "category" data type')
             self.assertEqual(fb.bins, [mn, md, mx], f'Bins not set as expected. Got {fb.bins}')
             self.assertEqual(td.inference_ready, True, f'Tensor should still be ready for inference')
+            self.assertEqual(td.rank, 2, f'This should have been a rank 2 tensor. Got {td.rank}')
             self.assertListEqual(td.categorical_features(), [fb], f'Expanded Feature not correct')
             self.assertEqual(sorted(list(df[bin_name].unique())), list(range(0, fb.number_of_bins)))
             self.assertEqual(len(td.embedded_features), 2, f'Expecting 2 embed feats {len(td.embedded_features)}')
