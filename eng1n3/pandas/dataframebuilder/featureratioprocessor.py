@@ -6,11 +6,9 @@ import pandas as pd
 import numpy as np
 from typing import List
 
-from f3atur3s import Feature, FeatureRatio, FeatureTypeInteger
+from f3atur3s import Feature, FeatureRatio
 
-from ..dataframebuilder import FeatureProcessor
-from ..common.data import pandas_type
-from ..common.exception import EnginePandasException
+from .dataframebuilder import FeatureProcessor
 from ..common.data import pandas_type
 
 

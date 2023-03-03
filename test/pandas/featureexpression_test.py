@@ -1,6 +1,6 @@
 """
 Unit Tests for PandasNumpy Engine, specifically the FeatureBin usage
-(c) 2020 d373c7
+(c) 2020 tsm
 """
 import unittest
 import os
@@ -39,8 +39,8 @@ class TestFeatureExpression(unittest.TestCase):
         td1 = ft.TensorDefinition('base', [fa])
         td2 = ft.TensorDefinition('derived', [fe])
         with en.EnginePandas(num_threads=1) as e:
-            df1 = e.from_csv(td1, file, inference=False)
-            df2 = e.from_csv(td2, file, inference=False)
+            df1 = e.df_from_csv(td1, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
         df1['Amount'] = df1['Amount'] + 1
         self.assertTrue(df1['Amount'].equals(df2['AddAmount']), f'Amounts should have been equal')
         self.assertEqual(df2.columns[0], fe_name, f'Column name incorrect. Got {df2.columns[0]}')
@@ -66,8 +66,8 @@ class TestFeatureExpression(unittest.TestCase):
         td1 = ft.TensorDefinition('base', [fa])
         td2 = ft.TensorDefinition('derived', [fe])
         with en.EnginePandas(num_threads=1) as e:
-            df1 = e.from_csv(td1, file, inference=False)
-            df2 = e.from_csv(td2, file, inference=False)
+            df1 = e.df_from_csv(td1, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
         df1['Amount'] = df1['Amount'] + 1
         self.assertTrue(df1['Amount'].equals(df2['AddAmount']), f'Amounts should have been equal')
         self.assertEqual(df2.columns[0], fe_name, f'Column name incorrect. Got {df1.columns[0]}')
@@ -93,8 +93,8 @@ class TestFeatureExpression(unittest.TestCase):
         td1 = ft.TensorDefinition('base', [fd])
         td2 = ft.TensorDefinition('derived', [fe])
         with en.EnginePandas(num_threads=1) as e:
-            df1 = e.from_csv(td1, file, inference=False)
-            df2 = e.from_csv(td2, file, inference=False)
+            df1 = e.df_from_csv(td1, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
             df1['Date'] = df1['Date'] + timedelta(days=1)
             self.assertTrue(df1['Date'].equals(df2[fe_name]), f'Dates should have been equal')
         self.assertEqual(df2.columns[0], fe_name, f'Column name incorrect. Got {df1.columns[0]}')

@@ -10,11 +10,12 @@ import numpy as np
 import multiprocessing as mp
 from typing import Optional, List
 
-from f3atur3s import Feature, FeatureExpander, TensorDefinition
+from f3atur3s import Feature, FeatureExpander, TensorDefinition, FeatureSeriesBased
 from ..common.engine import EngineContext
 from .common.exception import EnginePandasException
 from .helpers.validation import EnginePandasValidation
-from eng1n3.pandas.dataframebuilder import DataFrameBuilder
+from .dataframebuilder.dataframebuilder import DataFrameBuilder
+from .seriesbuilder.seriesbuilder import SeriesBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,36 @@ class EnginePandas(EngineContext):
     def one_hot_prefix(self):
         return self._one_hot_prefix
 
-    def from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
-                 time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:
+    def np_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
+                    time_feature: Optional[Feature] = None, inference: bool = True) -> np.ndarray:
+        """
+        Create a Numpy Array based on a TensorDefinition by reading a file.
+
+        Args:
+            target_tensor_def: The input tensor definition. It contains all the features that need to be built.
+            file: File to read. This must be a complete file path
+            delimiter: The delimiter used in the file to separate columns. Default is ',' (comma)
+            quote: Quote character. Default is \' (single quote)
+            time_feature: Feature to use for time-based calculations. Some features need to know
+                about the time such as for instance Grouper Features. Only needs to be provided if the target_tensor_def
+                contains Features that need a time dimension in order to build.
+            inference: (bool) Indicate if we are inferring or not. If True [COMPLETE]
+
+        Return:
+             A Numpy Array with the features included in the target_tensor_def
+        """
+        EnginePandasValidation.val_all_same_learning_category(target_tensor_def)
+        EnginePandasValidation.val_no_none_learning_category(target_tensor_def)
+        if all([isinstance(f, FeatureSeriesBased) for f in target_tensor_def.features]):
+            # Build series (Rank 2 features)
+            sp = SeriesBuilder(target_tensor_def.features, inference)
+        else:
+            # Build array (Rank 1 features)
+            df = self.df_from_csv(target_tensor_def, file, delimiter, quote, time_feature, inference)
+            return df.to_numpy()
+
+    def df_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
+                    time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:
 
         """
         Construct a Panda according to a tensor definition by reading a csv file from disk
@@ -54,8 +83,8 @@ class EnginePandas(EngineContext):
             delimiter: The delimiter used in the file to separate columns. Default is ',' (comma)
             quote: Quote character. Default is \' (single quote)
             time_feature: Feature to use for time-based calculations. Some features need to know
-                about the time such as for instance Grouper features. Only needs to be provided if the target_tensor_def
-                contains features that need time.
+                about the time such as for instance Grouper Features. Only needs to be provided if the target_tensor_def
+                contains features that need a time dimension in order to build.
             inference: (bool) Indicate if we are inferring or not. If True [COMPLETE]
 
         Returns:
@@ -97,10 +126,6 @@ class EnginePandas(EngineContext):
             )
             df = dfb.build(df)
             built_features = built_features + ready_to_build
-            # Make sure df is in the correct layout.
-            # td = TensorDefinition(f'Built Features', built_features)
-            # df = self._reshape(td, df)
-            # Re-define the features left to build
             need_to_build = [f for f in need_to_build if f not in built_features]
             i = i+1
 

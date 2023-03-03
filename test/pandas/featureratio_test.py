@@ -27,10 +27,10 @@ class TestFeatureRatio(unittest.TestCase):
         fr = ft.FeatureRatio(ratio_name, ft.FEATURE_TYPE_FLOAT, fa, fd)
         with en.EnginePandas(num_threads=1) as e:
             td1 = ft.TensorDefinition('All', [fa, fd])
-            df1 = e.from_csv(td1, file, inference=False)
+            df1 = e.df_from_csv(td1, file, inference=False)
             df1['ratio-2'] = df1[fa.name].div(df1[fd.name])
             td2 = ft.TensorDefinition('Derived', [fd, fr])
-            df2 = e.from_csv(td2, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
             self.assertTrue(df2[fr.name].equals(df1['ratio-2']), f'Ratios not equal')
             self.assertEqual(df2.columns[1], ratio_name, f'Column name incorrect. Got {df2.columns[0]}')
             self.assertEqual(df2.iloc[:, 1].dtype.name, 'float64', f'Expecting a float data type')
@@ -61,7 +61,7 @@ class TestFeatureRatio(unittest.TestCase):
         fr = ft.FeatureRatio(ratio_name, ft.FEATURE_TYPE_FLOAT, fa, fd)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fr])
-            df = e.from_csv(td, file, inference=False)
+            df = e.df_from_csv(td, file, inference=False)
             self.assertTrue((df[fr.name] == 0.0).all(), f'Ratios not all zero')
             self.assertEqual(df.columns[0], ratio_name, f'Column name incorrect. Got {df.columns[0]}')
             self.assertEqual(df.iloc[:, 0].dtype.name, 'float64', f'Expecting a float data type')

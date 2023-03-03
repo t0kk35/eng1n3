@@ -4,16 +4,13 @@ Feature Processor for the creation of FeatureSource features.
 """
 import logging
 import pandas as pd
-import datetime as dt
-from functools import partial
-from typing import List, Optional
+from typing import List
 
 from f3atur3s import Feature, FeatureSource, FeatureTypeTimeBased, FEATURE_TYPE_CATEGORICAL
 from f3atur3s import FeatureHelper
 
 from ..common.data import pandas_type
-from ..helpers.validation import EnginePandasValidation
-from ..dataframebuilder import FeatureProcessor
+from .dataframebuilder import FeatureProcessor
 
 
 logger = logging.getLogger(__name__)

@@ -6,11 +6,10 @@ import pandas as pd
 import numpy as np
 from typing import List
 
-from f3atur3s import Feature, FeatureExpression, FeatureTypeInteger
+from f3atur3s import Feature, FeatureExpression
 
-from ..dataframebuilder import FeatureProcessor
+from .dataframebuilder import FeatureProcessor
 from ..common.data import pandas_type
-from ..common.exception import EnginePandasException
 
 
 class FeatureExpressionProcessor(FeatureProcessor[FeatureExpression]):

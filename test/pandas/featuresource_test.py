@@ -1,6 +1,6 @@
 """
 Unit Tests for PandasNumpy Engine, specifically the FeatureSource usage
-(c) 2020 d373c7
+(c) 2020 tsm
 """
 import unittest
 
@@ -34,7 +34,7 @@ class TestReading(unittest.TestCase):
         with en.EnginePandas(num_threads=1) as e:
             for f, d, t in TestReading.features:
                 td = ft.TensorDefinition(d, [f])
-                df = e.from_csv(td, file, inference=False)
+                df = e.df_from_csv(td, file, inference=False)
                 self.assertEqual(len(df.columns), 1, f'Expected a one column panda for read test {d}')
                 self.assertEqual(df.columns[0], f.name, f'Wrong panda column for read test {d}. Got {df.columns[0]}')
                 self.assertEqual(df[f.name].dtype, t, f'Unexpected type. Got <{df[f.name].dtype}>. Expected <{t}> ')
@@ -44,7 +44,7 @@ class TestReading(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [f for f, d, t in TestReading.features])
-            df = e.from_csv(td, file, inference=False)
+            df = e.df_from_csv(td, file, inference=False)
             self.assertEqual(len(df.columns), len(TestReading.features),
                              f'Incorrect number of columns for read all test. got {len(df.columns)}')
             for i, (f, _, t) in enumerate(TestReading.features):
@@ -54,7 +54,7 @@ class TestReading(unittest.TestCase):
     def test_read_base_all_non_def_delimiter(self):
         file = FILES_DIR + 'engine_test_base_pipe.csv'
         with en.EnginePandas(num_threads=1) as e:
-            df = e.from_csv(ft.TensorDefinition('All', [f for f, d, t in TestReading.features]),
+            df = e.df_from_csv(ft.TensorDefinition('All', [f for f, d, t in TestReading.features]),
                             file, inference=False, delimiter='|')
             self.assertEqual(len(df.columns), len(TestReading.features),
                              f'Incorrect number of columns for read all test. got {len(df.columns)}')
@@ -67,7 +67,7 @@ class TestReading(unittest.TestCase):
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [f])
             with self.assertRaises(ValueError):
-                _ = e.from_csv(td, file, inference=False)
+                _ = e.df_from_csv(td, file, inference=False)
 
 
 class TestDate(unittest.TestCase):
@@ -80,9 +80,9 @@ class TestDate(unittest.TestCase):
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [f])
             with self.assertRaises(ValueError):
-                _ = e.from_csv(td, file, inference=False)
+                _ = e.df_from_csv(td, file, inference=False)
 
-    # TODO need test with multiple source features that are dates. There was an iterator problem?
+    # TODO need test with multiple source dataframebuilder that are dates. There was an iterator problem?
 
 
 class TestCategorical(unittest.TestCase):
@@ -93,7 +93,7 @@ class TestCategorical(unittest.TestCase):
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL)
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
-            df = e.from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
+            df = e.df_from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
             self.assertEqual(df.dtypes[0], 'category', 'Source with f_type should be categorical')
             self.assertListEqual(df[fc.name].unique().dropna().tolist(), list(df.dtypes[0].categories))
 
@@ -102,7 +102,7 @@ class TestCategorical(unittest.TestCase):
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default=default)
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
-            df = e.from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
+            df = e.df_from_csv(ft.TensorDefinition('All', [fc]), file, inference=False)
             self.assertEqual(fc.default, default, f'Default incorrect. Got {fc.default}')
             self.assertEqual(df.dtypes[0], 'category', 'Source with f_type should be categorical')
             self.assertIn(default, list(df['MCC']), f'Default not found in Panda')

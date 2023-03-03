@@ -50,12 +50,12 @@ class TestFeatureBin(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fa])
-            df = e.from_csv(td, file, inference=False)
+            df = e.df_from_csv(td, file, inference=False)
             mx = np.finfo(df['Amount'].dtype).max
             mn = df['Amount'].min()
             md = df['Amount'].mean()
             td2 = ft.TensorDefinition('Derived', [fb])
-            df = e.from_csv(td2, file, inference=False)
+            df = e.df_from_csv(td2, file, inference=False)
             self.assertEqual(len(df.columns), 1, f'Should have gotten one column. Got {len(df.columns)}')
             self.assertEqual(fb.learning_category, ft.LEARNING_CATEGORY_CATEGORICAL, f'Expecting Categorical LC')
             self.assertEqual(df.columns[0], bin_name, f'Column name incorrect. Got {df.columns[0]}')
@@ -89,16 +89,16 @@ class TestFeatureBin(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('Derived', [fa])
-            df = e.from_csv(td, file1, inference=False)
+            df = e.df_from_csv(td, file1, inference=False)
             mx = np.finfo(df['Amount'].dtype).max
             mn = df['Amount'].min()
             md = df['Amount'].mean()
             td_d = ft.TensorDefinition('Derived', [fb])
-            _ = e.from_csv(td_d, file1, inference=False)
+            _ = e.df_from_csv(td_d, file1, inference=False)
             self.assertEqual(fb.inference_ready, True, f'Bin Feature should have been ready for inference')
             self.assertEqual(td_d.inference_ready, True, f'TensorDefinition should have been ready for inference')
             # Now run inference mode on file w/removed line
-            df_1 = e.from_csv(td_d, file2, inference=True)
+            df_1 = e.df_from_csv(td_d, file2, inference=True)
             bin_v = df_1[bin_name].unique()
             # Should not have a 0 bin. As we removed the 0.0 amount
             self.assertNotIn(0, bin_v, f'Should not have had a 0 value')
@@ -133,16 +133,16 @@ class TestFeatureBin(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td_c = ft.TensorDefinition('All', [fa])
-            df = e.from_csv(td_c, file2, inference=False)
+            df = e.df_from_csv(td_c, file2, inference=False)
             mx = np.finfo(df['Amount'].dtype).max
             mn = df['Amount'].min()
             md = df['Amount'].mean()
             # Run without inference on reduced file
             td = ft.TensorDefinition('Derived', [fb])
-            df_n = e.from_csv(td, file2, inference=False)
+            df_n = e.df_from_csv(td, file2, inference=False)
             bin_v = df_n[bin_name].unique()
             # And inference on original file
-            df = e.from_csv(td, file1, inference=True)
+            df = e.df_from_csv(td, file1, inference=True)
             self.assertEqual(fb.number_of_bins, len(bin_v), f'Number of bins changed {fb.number_of_bins}')
             self.assertEqual(df[bin_name][0], 0, f'Missing row should have been in 0 bin {df[bin_name][0]}')
             self.assertEqual(df[bin_name][1], 0, f'2 nd row should have been in 0 bin {df[bin_name][0]}')
@@ -177,16 +177,16 @@ class TestFeatureBin(unittest.TestCase):
         copy_file_remove_last_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td_c = ft.TensorDefinition('All', [fa])
-            df = e.from_csv(td_c, file2, inference=False)
+            df = e.df_from_csv(td_c, file2, inference=False)
             mx = np.finfo(df['Amount'].dtype).max
             mn = df['Amount'].min()
             md = df['Amount'].mean()
             # Run without inference on reduced file
             td = ft.TensorDefinition('Derived', [fb])
-            df_n = e.from_csv(td, file2, inference=False)
+            df_n = e.df_from_csv(td, file2, inference=False)
             bin_v = df_n[bin_name].unique()
             # And inference on original file
-            df = e.from_csv(td, file1, inference=True)
+            df = e.df_from_csv(td, file1, inference=True)
             self.assertEqual(fb.number_of_bins, len(bin_v), f'Number of bins changed {fb.number_of_bins}')
             self.assertEqual(df[bin_name][0], 0, f'First row should have been in 0 bin {df[bin_name][0]}')
             self.assertEqual(df[bin_name].iloc[-1], nr_bins-1, f'Last should have max bin {df[bin_name].iloc[-1]}')

@@ -10,7 +10,7 @@ from f3atur3s import Feature, FeatureNormalizeLogBase
 
 from .processor import T
 from ..common.exception import EnginePandasException
-from ..dataframebuilder import FeatureProcessor
+from .dataframebuilder import FeatureProcessor
 
 
 class FeatureNormalizeProcessor(FeatureProcessor[T], ABC):

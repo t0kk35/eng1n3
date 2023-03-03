@@ -6,6 +6,7 @@ import pandas as pd
 from typing import List
 
 from f3atur3s import TensorDefinition, FeatureExpander, Feature, FeatureGrouper, FeatureHelper, FeatureTypeTimeBased
+from f3atur3s import LEARNING_CATEGORY_NONE
 
 from ..common.exception import EnginePandasException
 
@@ -14,7 +15,7 @@ class EnginePandasValidation:
     @staticmethod
     def val_features_in_data_frame(df: pd.DataFrame, tensor_def: TensorDefinition, one_hot_prefix: str):
         """
-        Validation function to check if all features in a tensor definition are known data frame columns
+        Validation function to check if all dataframebuilder in a tensor definition are known data frame columns
 
         Args:
             df: A Panda Dataframe
@@ -32,7 +33,7 @@ class EnginePandasValidation:
                 names = [name for name in df.columns if name == feature.name]
             if len(names) == 0:
                 raise EnginePandasException(
-                    f'During reshape, all features of tensor definition must be in the panda. Missing {feature.name}'
+                    f'During reshape, all dataframebuilder of tensor definition must be in the panda. Missing {feature.name}'
                 )
 
     @staticmethod
@@ -55,7 +56,7 @@ class EnginePandasValidation:
     @staticmethod
     def val_ready_for_inference(tensor_def: TensorDefinition, inference: bool):
         """
-        Validation function to check if all feature are ready for inference. Some features have specific inference
+        Validation function to check if all feature are ready for inference. Some dataframebuilder have specific inference
         attributes that need to be set before an inference file can be made.
 
         Args:
@@ -71,16 +72,16 @@ class EnginePandasValidation:
         if inference:
             if not tensor_def.inference_ready:
                 raise EnginePandasException(
-                    f'Tensor <{tensor_def.name}> not ready for inference. Following features not ready ' +
+                    f'Tensor <{tensor_def.name}> not ready for inference. Following dataframebuilder not ready ' +
                     f' {tensor_def.features_not_inference_ready()}'
                 )
 
     @staticmethod
     def val_features_defined_as_columns(df: pd.DataFrame, features: List[Feature]):
         """
-        Validation function that checks if the needed columns are available in the Panda. Only root features which
-        are not derived from other features need to be in the Panda. The rest of the features can obviously be
-        derived from the root features.
+        Validation function that checks if the needed columns are available in the Panda. Only root dataframebuilder which
+        are not derived from other dataframebuilder need to be in the Panda. The rest of the dataframebuilder can obviously be
+        derived from the root dataframebuilder.
 
         Args:
             df: The base Panda data to be checked.
@@ -96,14 +97,14 @@ class EnginePandasValidation:
         unknown_features = [f for f in root_features if f.name not in df.columns]
         if len(unknown_features) != 0:
             raise EnginePandasException(
-                f'All root features of a tensor definition (i.e. non-derived features) must be in the input df. Did '
+                f'All root dataframebuilder of a tensor definition (i.e. non-derived dataframebuilder) must be in the input df. Did '
                 f'not find {[f.name for f in unknown_features]}'
             )
 
     @staticmethod
     def val_time_feature_needed(target_tensor_def: TensorDefinition, time_feature: Feature):
         """
-        Validation function that checks if a "time_feature" variable will be required to build the features. This can
+        Validation function that checks if a "time_feature" variable will be required to build the dataframebuilder. This can
         be the case for instance for Feature Groupers, they need to know about time.
 
         Args:
@@ -127,3 +128,40 @@ class EnginePandasValidation:
                     raise EnginePandasException(
                         f'The time feature used to build a series must be date based. It is of type {time_feature.type}'
                     )
+
+    @staticmethod
+    def val_all_same_learning_category(target_tensor_def: TensorDefinition) -> None:
+        """
+        Validation routine to check that all the dataframebuilder of the TensorDefinition have the same learning
+        category
+
+        Args:
+            target_tensor_def: The TensorDefinition we are going to try and build.
+
+        Returns:
+             None
+        """
+        lcs = list(set([f.learning_category for f in target_tensor_def.features]))
+        if len(lcs) > 1:
+            raise EnginePandasException(f'All embedded dataframebuilder in the TensorDefinition {target_tensor_def.name} ' +
+                                        f'should have the same LearningCategories. Found LCs {lcs}')
+
+    @staticmethod
+    def val_no_none_learning_category(target_tensor_def: TensorDefinition):
+        """
+        Validation routine to check that none of the dataframebuilder of the TensorDefinition have LEARNING_CATEGORY_NONE
+
+        Args:
+            target_tensor_def: The TensorDefinition we are going to try and build.
+
+        Raises:
+            EnginePandasException if there is a feature with LEARNING_CATEGORY_NONE
+
+        Returns:
+             None
+        """
+        if LEARNING_CATEGORY_NONE in [f.learning_category for f in target_tensor_def.features]:
+            raise EnginePandasException(
+                f'Can not build dataframebuilder with Learning Category None ' +
+                f'{[f.name for f in target_tensor_def.features if f.learning_category == LEARNING_CATEGORY_NONE]}'
+            )

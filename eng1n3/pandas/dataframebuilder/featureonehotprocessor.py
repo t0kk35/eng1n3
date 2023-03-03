@@ -7,7 +7,7 @@ from typing import List
 
 from f3atur3s import Feature, FeatureOneHot
 
-from ..dataframebuilder import FeatureProcessor
+from eng1n3.pandas.dataframebuilder.dataframebuilder import FeatureProcessor
 
 
 class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):

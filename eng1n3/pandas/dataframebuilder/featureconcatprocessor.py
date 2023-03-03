@@ -3,14 +3,11 @@ Feature Processor for the creation of FeatureConcat features.
 (c) 2023 tsm
 """
 import pandas as pd
-import numpy as np
-from typing import List, TypeVar
+from typing import List
 
-from f3atur3s import Feature, FeatureConcat, FeatureTypeInteger
+from f3atur3s import Feature, FeatureConcat
 
-from ..dataframebuilder import FeatureProcessor
-from ..common.data import pandas_type
-from ..common.exception import EnginePandasException
+from .dataframebuilder import FeatureProcessor
 
 
 class FeatureConcatProcessor(FeatureProcessor[FeatureConcat]):

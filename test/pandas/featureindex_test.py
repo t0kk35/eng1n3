@@ -50,10 +50,10 @@ class TestIndex(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fc])
-            df = e.from_csv(td, file, inference=False)
+            df = e.df_from_csv(td, file, inference=False)
             mcc_v = df['MCC'].unique()
             td2 = ft.TensorDefinition('Derived', [fi])
-            df = e.from_csv(td2, file, inference=False)
+            df = e.df_from_csv(td2, file, inference=False)
             self.assertEqual(len(df.columns), 1, f'Should have gotten one column. Got {len(df.columns)}')
             self.assertEqual(df.columns[0], ind_name, f'Column name incorrect. Got {df.columns[0]}')
             self.assertEqual(df.iloc[:, 0].dtype.name, 'int16', f'Expecting a uint16 data type')
@@ -87,12 +87,12 @@ class TestIndex(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('Derived', [fi])
-            df_1 = e.from_csv(td, file1, inference=False)
+            df_1 = e.df_from_csv(td, file1, inference=False)
             self.assertEqual(fi.inference_ready, True, f'Index feature should be ready for inference')
             self.assertEqual(td.inference_ready, True, f'The TensorDefinition should be ready for inference')
             # Now remove a line and run in inference mode
             df_1 = df_1.iloc[1:].reset_index()
-            df_2 = e.from_csv(td, file2, inference=True)
+            df_2 = e.df_from_csv(td, file2, inference=True)
             mcc_v = df_2[ind_name].unique()
             self.assertTrue(1 in fi.dictionary.values(), f'The value 1 should be in the dictionary')
             self.assertFalse(1 in mcc_v, f'The Value 1 should not appear in the inference set')
@@ -127,10 +127,10 @@ class TestIndex(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('Derived', [fi])
-            df_1 = e.from_csv(td, file2, inference=False)
+            df_1 = e.df_from_csv(td, file2, inference=False)
             mcc_v = df_1[ind_name].unique()
             # And inference on original
-            df_2 = e.from_csv(td, file1, inference=True)
+            df_2 = e.df_from_csv(td, file1, inference=True)
             self.assertTrue(1 in fi.dictionary.values(), f'The value 1 should not be in the dictionary')
             self.assertTrue(1 in mcc_v, f'The Value 1 should not appear in the inference set')
             self.assertTrue(df_1[ind_name].equals(df_2.iloc[1:].reset_index()[ind_name]), f'Series not the same')

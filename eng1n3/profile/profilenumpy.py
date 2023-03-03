@@ -47,12 +47,12 @@ class ProfileNumpy:
         tw_tp_ff_bf = [(f.time_window, f.time_period, f.filter_feature, f.base_feature) for f in features]
         u_tp_ff_bf = list(set([(tp, ff, bf) for _, tp, ff, bf in tw_tp_ff_bf]))
         self._array_shape = (len(u_tp_ff_bf), max([tw for tw, _, _, _ in tw_tp_ff_bf]), NUMBER_OF_AGGREGATORS)
-        # A pre-built list of the aggregator indexes for each of the features of this profile
+        # A pre-built list of the aggregator indexes for each of the dataframebuilder of this profile
         self._aggregator_index = np.array([f.aggregator.key for f in self.features])
-        # A pre-built list of the time_window for each of the features of this profile
+        # A pre-built list of the time_window for each of the dataframebuilder of this profile
         self._time_windows = np.array([f.time_window for f in self.features])
         # A pre-built ndarray of booleans that knows which base_feature needs to contribute to which element.
-        self._base_feature_filters = np.empty((len(self.base_features), len(u_tp_ff_bf)), dtype=np.bool)
+        self._base_feature_filters = np.empty((len(self.base_features), len(u_tp_ff_bf)), dtype=bool)
         for i, bf in enumerate(self.base_features):
             self._base_feature_filters[i] = np.isin(
                 np.arange(self.array_shape[0]), [idx for idx, (_, _, ufb) in enumerate(u_tp_ff_bf) if ufb == bf]
@@ -175,7 +175,7 @@ class ProfileNumpy:
 
         Args:
             f: (Feature). The feature to look up.
-            feature_list: (List[Feature]). A list of features to use a lookup list.
+            feature_list: (List[Feature]). A list of dataframebuilder to use a lookup list.
 
         Returns:
             Index of f in feature_list
@@ -204,7 +204,7 @@ class ProfileNumpyStore:
         gf = list(set([f.group_feature for f in grouper_features]))
         if len(gf) > 1:
             raise ProfileNumpyException(
-                f'All Grouper features in a store must have the same group_feature. Got {gf}'
+                f'All Grouper dataframebuilder in a store must have the same group_feature. Got {gf}'
             )
 
     def new_store_array(self) -> np.ndarray:
@@ -247,9 +247,9 @@ def profile_contrib(base_filters: np.ndarray, filter_index: np.ndarray, base_val
             Values should be fetched with the `ProfileNumpy.base_filters` property
         filter_index (np.ndarray) : A numpy array that holds an index to the filter that needs to be applied to each
             element in the profile. Values should be fetched with the `ProfileNumpy.filter_indexes` property
-        base_values (np.ndarray) : The contribution to add. Is a float64 ndarray with the values of the base features
+        base_values (np.ndarray) : The contribution to add. Is a float64 ndarray with the values of the base dataframebuilder
             that need to contribute to this profile.
-        filter_values (np.ndarray) : The values of the filter features [if any] of the elements.
+        filter_values (np.ndarray) : The values of the filter dataframebuilder [if any] of the elements.
         pe_array (np.ndarray) : The profile element array containing all the profiles. It is of shape
             (#elements X #max_time_window X #number_of_aggregators). Should be created with the
             `ProfileNumpy.new_element_array` method
@@ -264,7 +264,7 @@ def profile_contrib(base_filters: np.ndarray, filter_index: np.ndarray, base_val
         if filter_index[i] != -1 and filter_values[filter_index[i]] == 0:
             flt_f[i] = False
 
-    # Iterate over the base features and contribute to the relevant elements.
+    # Iterate over the base dataframebuilder and contribute to the relevant elements.
     for i in range(base_filters.shape[0]):
         # Combine filters. This will now only update the elements with a specific base_feature AND it's filter is either
         # not set or True
@@ -289,7 +289,7 @@ def profile_contrib(base_filters: np.ndarray, filter_index: np.ndarray, base_val
 def profile_aggregate(f_filter: np.ndarray, agg_index: np.ndarray, time_windows: np.ndarray,
                       pe_array: np.ndarray) -> np.ndarray:
     """
-    Aggregate all the feature in a profile. This function will iterate over the features and will run the aggregation
+    Aggregate all the feature in a profile. This function will iterate over the dataframebuilder and will run the aggregation
     logic on the required time_period. This is a numba jit-ed function
 
     Args:
@@ -307,7 +307,7 @@ def profile_aggregate(f_filter: np.ndarray, agg_index: np.ndarray, time_windows:
             `ProfileNumpy.new_element_array` method
 
     Returns:
-        Numpy array of shape (#group_features). It contains all the aggregated values for all the group features in the
+        Numpy array of shape (#group_features). It contains all the aggregated values for all the group dataframebuilder in the
             profile
     """
     out = np.zeros(f_filter.shape[0])
@@ -369,7 +369,7 @@ def profile_aggregate(f_filter: np.ndarray, agg_index: np.ndarray, time_windows:
                 out[i] = np.sqrt((m2/(count-1))).item()
         else:
             raise IndexError()
-        # End of loop over features.
+        # End of loop over dataframebuilder.
     return out
 
 

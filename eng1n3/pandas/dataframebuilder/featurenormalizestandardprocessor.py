@@ -4,15 +4,11 @@ Feature Processor for the creation of FeatureNormaliseStandard features.
 """
 import logging
 import pandas as pd
-import numpy as np
 from typing import List
 
-from f3atur3s import Feature, FeatureNormalizeStandard, FeatureTypeInteger
+from f3atur3s import Feature, FeatureNormalizeStandard
 
-from ..dataframebuilder import FeatureProcessor
 from .featurenormalizeprocessor import FeatureNormalizeProcessor
-from ..common.data import pandas_type
-from ..common.exception import EnginePandasException
 
 logger = logging.getLogger(__name__)
 

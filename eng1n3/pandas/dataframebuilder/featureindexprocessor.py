@@ -8,7 +8,7 @@ from typing import List
 
 from f3atur3s import Feature, FeatureIndex, FeatureTypeInteger
 
-from ..dataframebuilder import FeatureProcessor
+from .dataframebuilder import FeatureProcessor
 from ..common.data import pandas_type
 from ..common.exception import EnginePandasException
 

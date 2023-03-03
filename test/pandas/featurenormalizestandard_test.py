@@ -53,19 +53,19 @@ class TestNormalizeStandard(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fa])
-            df1 = e.from_csv(td, file, inference=False)
+            df1 = e.df_from_csv(td, file, inference=False)
             mn = df1['Amount'].mean()
             st = df1['Amount'].std()
             df1['standard'] = (df1['Amount'] - mn) / st
             td2 = ft.TensorDefinition('Derived', [fs])
-            df2 = e.from_csv(td2, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
             self.assertEqual(len(df2.columns), 1, f'Only one columns should have been returned')
             self.assertEqual(df2.columns[0], s_name, f'Column name is not correct {df2.columns[0]}')
             self.assertTrue(df1['standard'].equals(df2[s_name]), 'Series not equal')
             self.assertEqual(df2.iloc[:, 0].dtype.name, 'float32', f'Expecting a "float32" data type')
             self.assertEqual(fs.learning_category, ft.LEARNING_CATEGORY_CONTINUOUS, f'Expecting Continuous LC')
             self.assertEqual(fs.inference_ready, True, f'Feature should now be inference ready')
-            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded features')
+            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded dataframebuilder')
             self.assertEqual(fs.mean, mn, f'Mean not set correctly {fs.mean}')
             self.assertEqual(fs.stddev, st, f'Stddev not set correctly {fs.stddev}')
             self.assertEqual(td2.inference_ready, True, f'Tensor should be ready for inference')
@@ -74,7 +74,7 @@ class TestNormalizeStandard(unittest.TestCase):
             self.assertEqual(len(td2.embedded_features), 2, f'Expecting 2 embed feats {len(td.embedded_features)}')
             self.assertListEqual(
                 sorted(td2.embedded_features, key=lambda x: x.name),
-                sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
+                sorted([fs, fa], key=lambda x: x.name), f'Embedded dataframebuilder should be fs and fa'
             )
 
     def test_read_w_logs_non_inference(self):
@@ -87,12 +87,12 @@ class TestNormalizeStandard(unittest.TestCase):
             with en.EnginePandas(num_threads=1) as e:
                 fs = ft.FeatureNormalizeStandard(s_name, s_type, fa, log)
                 td1 = ft.TensorDefinition('All', [fa])
-                df1 = e.from_csv(td1, file, inference=False)
+                df1 = e.df_from_csv(td1, file, inference=False)
                 mn = log_fn(df1['Amount']+fs.delta).mean()
                 st = log_fn(df1['Amount']+fs.delta).std()
                 df1['standard'] = (log_fn(df1['Amount']+fs.delta) - mn) / st
                 td2 = ft.TensorDefinition('Derived', [fs])
-                df2 = e.from_csv(td2, file, inference=False)
+                df2 = e.df_from_csv(td2, file, inference=False)
                 self.assertEqual(len(df2.columns), 1, f'Only one columns should have been returned')
                 self.assertEqual(df2.columns[0], s_name, f'Column name is not correct {df2.columns[0]}')
                 self.assertTrue(df1['standard'].equals(df2[s_name]), f'Not equal {df1["standard"]}, {df2[s_name]}')
@@ -101,14 +101,14 @@ class TestNormalizeStandard(unittest.TestCase):
                 self.assertAlmostEqual(fs.stddev, st, 5, f'Stddev not set correctly {fs.stddev}')
                 self.assertListEqual(td2.continuous_features(True), [fs], f'Expanded Feature not correct')
                 self.assertEqual(fs.inference_ready, True, f'Feature should now be inference ready')
-                self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded features')
+                self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded dataframebuilder')
                 self.assertEqual(td2.inference_ready, True, f'Tensor should be ready for inference')
                 self.assertEqual(td2.rank, 2, f'This should have been a rank 2 tensor. Got {td2.rank}')
                 self.assertListEqual(td2.continuous_features(), [fs], f'Expanded Feature not correct')
                 self.assertEqual(len(td2.embedded_features), 2, f'Expecting 2 embed feats {len(td2.embedded_features)}')
                 self.assertListEqual(
                     sorted(td2.embedded_features, key=lambda x: x.name),
-                    sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
+                    sorted([fs, fa], key=lambda x: x.name), f'Embedded dataframebuilder should be fs and fa'
                 )
 
     def test_inference_remove_element(self):
@@ -123,17 +123,17 @@ class TestNormalizeStandard(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fa])
-            df_1 = e.from_csv(td, file1, inference=False)
+            df_1 = e.df_from_csv(td, file1, inference=False)
             mn = df_1['Amount'].mean()
             st = df_1['Amount'].std()
             df_1['standard'] = (df_1['Amount'] - mn) / st
             df_1 = df_1.iloc[1:].reset_index()
             td = ft.TensorDefinition('Derived', [fs])
-            _ = e.from_csv(td, file1, inference=False)
+            _ = e.df_from_csv(td, file1, inference=False)
             self.assertEqual(fs.inference_ready, True, f'Scale feature should be ready for inference')
             self.assertEqual(td.inference_ready, True, f'The TensorDefinition should be ready for inference')
             # Now remove a line and run in inference mode
-            df_2 = e.from_csv(td, file2, inference=True)
+            df_2 = e.df_from_csv(td, file2, inference=True)
             self.assertEqual(len(df_2.columns), 1, f'Only one columns should have been returned')
             self.assertEqual(df_2.columns[0], s_name, f'Column name is not correct {df_2.columns[0]}')
             self.assertEqual(df_1['standard'].equals(df_2[s_name]), True, f'Inference problem. Series not the same')
@@ -141,7 +141,7 @@ class TestNormalizeStandard(unittest.TestCase):
             self.assertEqual(df_2.iloc[:, 0].dtype.name, 'float32', f'Expecting a "float32" data type')
             self.assertEqual(fs.learning_category, ft.LEARNING_CATEGORY_CONTINUOUS, f'Expecting Continuous LC')
             self.assertEqual(fs.inference_ready, True, f'Feature should now be inference ready')
-            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded features')
+            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded dataframebuilder')
             self.assertEqual(fs.mean, mn, f'Mean not set correctly {fs.mean}')
             self.assertEqual(fs.stddev, st, f'Stddev not set correctly {fs.stddev}')
             self.assertEqual(td.inference_ready, True, f'Tensor should be ready for inference')
@@ -150,7 +150,7 @@ class TestNormalizeStandard(unittest.TestCase):
             self.assertEqual(len(td.embedded_features), 2, f'Expecting 2 embed feats {len(td.embedded_features)}')
             self.assertListEqual(
                 sorted(td.embedded_features, key=lambda x: x.name),
-                sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
+                sorted([fs, fa], key=lambda x: x.name), f'Embedded dataframebuilder should be fs and fa'
             )
 
         remove_file_if_exists(file2)
@@ -167,19 +167,19 @@ class TestNormalizeStandard(unittest.TestCase):
         copy_file_remove_first_line(file1, file2)
         with en.EnginePandas(num_threads=1) as e:
             td = ft.TensorDefinition('All', [fa])
-            df_1 = e.from_csv(td, file2, inference=False)
+            df_1 = e.df_from_csv(td, file2, inference=False)
             mn = df_1['Amount'].mean()
             st = df_1['Amount'].std()
             # We have the max and min from file 2 now apply to file1
             td = ft.TensorDefinition('Derived', [fa])
-            df_1 = e.from_csv(td, file1, inference=False)
+            df_1 = e.df_from_csv(td, file1, inference=False)
             df_1['standard'] = (df_1['Amount'] - mn) / st
             # Read file 2, in non-inference, then file with inference
             td = ft.TensorDefinition('Derived', [fs])
-            _ = e.from_csv(td, file2, inference=False)
+            _ = e.df_from_csv(td, file2, inference=False)
             self.assertEqual(fs.inference_ready, True, f'Scale feature should be ready for inference')
             self.assertEqual(td.inference_ready, True, f'The TensorDefinition should be ready for inference')
-            df_2 = e.from_csv(td, file1, inference=True)
+            df_2 = e.df_from_csv(td, file1, inference=True)
             self.assertEqual(len(df_2.columns), 1, f'Only one columns should have been returned')
             self.assertEqual(df_2.columns[0], s_name, f'Column name is not correct {df_2.columns[0]}')
             self.assertEqual(df_1['standard'].equals(df_2[s_name]), True, f'Inference problem. Series not the same')
@@ -187,7 +187,7 @@ class TestNormalizeStandard(unittest.TestCase):
             self.assertEqual(df_2.iloc[:, 0].dtype.name, 'float32', f'Expecting a "float32" data type')
             self.assertEqual(fs.learning_category, ft.LEARNING_CATEGORY_CONTINUOUS, f'Expecting Continuous LC')
             self.assertEqual(fs.inference_ready, True, f'Feature should now be inference ready')
-            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded features')
+            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded dataframebuilder')
             self.assertEqual(fs.mean, mn, f'Mean not set correctly {fs.mean}')
             self.assertEqual(fs.stddev, st, f'Minimum not set correctly {fs.stddev}')
             self.assertEqual(td.inference_ready, True, f'Tensor should be ready for inference')
@@ -196,7 +196,7 @@ class TestNormalizeStandard(unittest.TestCase):
             self.assertEqual(len(td.embedded_features), 2, f'Expecting 2 embed feats {len(td.embedded_features)}')
             self.assertListEqual(
                 sorted(td.embedded_features, key=lambda x: x.name),
-                sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
+                sorted([fs, fa], key=lambda x: x.name), f'Embedded dataframebuilder should be fs and fa'
             )
 
         remove_file_if_exists(file2)
