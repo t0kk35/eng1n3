@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 from statistics import stdev
+from typing import List
 
 import numpy as np
 
@@ -58,7 +59,7 @@ class TestGrouperFeature(unittest.TestCase):
         td = ft.TensorDefinition('Derived', [fd, fr, fa, ff, fg])
         with en.EnginePandas(num_threads=1) as e:
             with self.assertRaises(en.EnginePandasException):
-                _ = e.df_from_csv(td, file, inference=False)
+                _ = e.df_from_csv(td, file, time_feature=fa, inference=False)
 
     def test_grouped_single_window_all_aggregates(self):
         # Base test. Create single aggregate daily sum on card

@@ -75,7 +75,7 @@ class FeatureGrouperProcessor(FeatureProcessor[FeatureGrouper]):
                     dfs = p.map(key_function, [rows for _, rows in df.groupby(g.name)])
                 df = pd.concat(dfs, axis=0)
 
-            logger.info(f'Start creating aggregate grouper features for <{g.name}> ')
+            logger.info(f'Done creating aggregate grouper features for <{g.name}> ')
 
         # Restore Original Sort
         df.sort_index(inplace=True)
