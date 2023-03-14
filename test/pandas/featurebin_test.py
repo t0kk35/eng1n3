@@ -208,6 +208,20 @@ class TestFeatureBin(unittest.TestCase):
         remove_file_if_exists(file2)
 
 
+class TestNP(unittest.TestCase):
+    def test_from_np_good(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
+        fb = ft.FeatureBin('BinAmount', ft.FEATURE_TYPE_INT_16, fa, 3)
+        td = ft.TensorDefinition('TestNP', [fb])
+        with en.EnginePandas(num_threads=1) as e:
+            df = e.df_from_csv(td, file, inference=False)
+            n = e.np_from_csv(td, file, inference=False)
+        self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
+        self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
+        self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
+        self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
+
 def main():
     unittest.main()
 

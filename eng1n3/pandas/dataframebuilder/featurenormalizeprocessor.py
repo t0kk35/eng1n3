@@ -8,7 +8,7 @@ from typing import Type, List, Optional, Callable
 
 from f3atur3s import Feature, FeatureNormalizeLogBase
 
-from .processor import T
+from .featureprocessor import T
 from ..common.exception import EnginePandasException
 from .dataframebuilder import FeatureProcessor
 

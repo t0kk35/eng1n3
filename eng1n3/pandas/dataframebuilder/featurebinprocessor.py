@@ -8,7 +8,7 @@ from typing import List
 
 from f3atur3s import Feature, FeatureBin
 
-from .processor import FeatureProcessor
+from .featureprocessor import FeatureProcessor
 from ..common.data import pandas_type
 
 

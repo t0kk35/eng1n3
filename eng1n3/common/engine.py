@@ -12,6 +12,10 @@ class EngineContextException(Exception):
         super().__init__('Error creating Engine context; ' + message)
 
 
+# Keep Original LogRecordFactory. We're going to overwrite it.
+ORIGINAL_LOG_FACTORY = logging.getLogRecordFactory()
+
+
 class EngineContext(ABC):
     """
     Base class for engine creation. Implemented a context for future use. All engines will be implemented a context
@@ -19,8 +23,10 @@ class EngineContext(ABC):
     """
     def __init__(self):
         logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s.%(msecs)03d %(name)-30s %(levelname)-8s %(message)s',
+                            format='%(asctime)s.%(msecs)03d %(trunc_name)-30s %(levelname)-8s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
+        # Override the LogRecordFactory with a truncating version
+        logging.setLogRecordFactory(self.log_record_factory)
         logger = logging.getLogger(__name__)
         logger.info('Start Engine...')
 
@@ -29,3 +35,10 @@ class EngineContext(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
+
+    @staticmethod
+    def log_record_factory(*args, **kwargs):
+        record = ORIGINAL_LOG_FACTORY(*args, **kwargs)
+        name = record.name
+        record.trunc_name = f'{name[:1]}...{name[-25:]}' if len(name) > 30 else name
+        return record

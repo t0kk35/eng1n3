@@ -1,5 +1,6 @@
 """
-(c) 2020 d373c7
+Concat Feature Tests
+(c) 2023 tsm
 """
 import unittest
 import os
@@ -79,6 +80,19 @@ class TestFeatureConcat(unittest.TestCase):
                 sorted(td_1.embedded_features, key=lambda x: x.name),
                 sorted([fr, fm, fc, fn1, fn2], key=lambda x: x.name), f'Embedded features should be fn, fm and fc'
             )
+
+
+class TestNP(unittest.TestCase):
+    def test_from_np_bad(self):
+        # Should fail for LEARNING_CATEGORY_NONE
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fc = ft.FeatureSource('Country', ft.FEATURE_TYPE_STRING)
+        fm = ft.FeatureSource('MCC', ft.FEATURE_TYPE_STRING)
+        ftc = ft.FeatureConcat('Concat', ft.FEATURE_TYPE_STRING, fc, fm)
+        td = ft.TensorDefinition('TestNP', [ftc])
+        with en.EnginePandas(num_threads=1) as e:
+            with self.assertRaises(en.EnginePandasException):
+                _ = e.np_from_csv(td, file, inference=False)
 
 
 def main():

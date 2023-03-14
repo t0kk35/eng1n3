@@ -4,6 +4,7 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureRatio usage
 """
 import unittest
 import os
+import numpy as np
 import f3atur3s as ft
 import eng1n3.pandas as en
 
@@ -82,6 +83,22 @@ class TestFeatureRatio(unittest.TestCase):
                 sorted(td.embedded_features, key=lambda x: x.name),
                 sorted([fa, fr, fd], key=lambda y: y.name), f'Embedded features should be fa, fr and fd'
             )
+
+
+class TestNP(unittest.TestCase):
+    def test_from_np_good(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
+        fd = ft.FeatureExpression('AddAmount', ft.FEATURE_TYPE_FLOAT, test_expr, [fa])
+        fr = ft.FeatureRatio('Ratio', ft.FEATURE_TYPE_FLOAT, fa, fd)
+        td = ft.TensorDefinition('TestNP', [fr])
+        with en.EnginePandas(num_threads=1) as e:
+            df = e.df_from_csv(td, file, inference=False)
+            n = e.np_from_csv(td, file, inference=False)
+        self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
+        self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
+        self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
+        self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
 
 
 def main():

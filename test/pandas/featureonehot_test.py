@@ -4,6 +4,7 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureOneHot usage
 """
 import unittest
 import os
+import numpy as np
 import f3atur3s as ft
 import eng1n3.pandas as en
 
@@ -60,8 +61,8 @@ class TestOneHot(unittest.TestCase):
             self.assertEqual(fo.embedded_features[0], fc, 'Embedded feature should be the original source feature')
             self.assertListEqual(fo.expand_names, mcc_c, f'Expanded names should match the column names')
             vt = set([vf for vf in fo.expand()])
-            self.assertEqual(len(vt), len(mcc_v), f'Should have gotten {len(mcc_v)} expanded dataframebuilder')
-            self.assertIsInstance(vt.pop(), ft.FeatureVirtual, f'Expanded dataframebuilder should be Virtual Features')
+            self.assertEqual(len(vt), len(mcc_v), f'Should have gotten {len(mcc_v)} expanded features')
+            self.assertIsInstance(vt.pop(), ft.FeatureVirtual, f'Expanded features should be Virtual Features')
             vn = [vf.name for vf in fo.expand()]
             self.assertListEqual(vn, mcc_c, f'Names of the Virtual Features must match columns')
             self.assertEqual(td.inference_ready, True, f'Tensor should have been ready for inference now')
@@ -71,7 +72,7 @@ class TestOneHot(unittest.TestCase):
             self.assertEqual(len(td2.embedded_features), 2, f'Expecting 2 embedded feats {len(td2.embedded_features)}')
             self.assertListEqual(
                 sorted(td2.embedded_features, key=lambda x: x.name),
-                sorted([fc, fo], key=lambda x: x.name), f'Embedded dataframebuilder should be fo and fc'
+                sorted([fc, fo], key=lambda x: x.name), f'Embedded features should be fo and fc'
             )
 
     # TODO Run test to check that a run with inference can only be done with a td that is ready for inference
@@ -108,14 +109,14 @@ class TestOneHot(unittest.TestCase):
             self.assertEqual(len(td_o.embedded_features), 2, f'Expecting 2 embedded feat {len(td_o.embedded_features)}')
             self.assertListEqual(
                 sorted(td_o.embedded_features, key=lambda x: x.name),
-                sorted([fc, fo], key=lambda x: x.name), f'Embedded dataframebuilder should be fo and fc'
+                sorted([fc, fo], key=lambda x: x.name), f'Embedded features should be fo and fc'
             )
 
         remove_file_if_exists(file2)
 
     def test_read_base_inference_added_element(self):
         # If a value of a OneHot Feature is NOT in the file without inference, but that value exists during inference,
-        # then that value should be removed. The number of expanded dataframebuilder should be the same regardless of inference
+        # then that value should be removed. The number of expanded features should be the same regardless of inference
         # We are going to remove the first line as the last happens to be the default which is always added.
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
         fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
@@ -144,7 +145,7 @@ class TestOneHot(unittest.TestCase):
             self.assertEqual(len(td_o.embedded_features), 2, f'Expecting 2 embedded feat {len(td_o.embedded_features)}')
             self.assertListEqual(
                 sorted(td_o.embedded_features, key=lambda x: x.name),
-                sorted([fc, fo], key=lambda x: x.name), f'Embedded dataframebuilder should be fo and fc'
+                sorted([fc, fo], key=lambda x: x.name), f'Embedded features should be fo and fc'
             )
 
         remove_file_if_exists(file2)
@@ -185,11 +186,25 @@ class TestOneHot(unittest.TestCase):
             self.assertEqual(len(td_o.embedded_features), 2, f'Expecting 2 embedded feat {len(td_o.embedded_features)}')
             self.assertListEqual(
                 sorted(td_o.embedded_features, key=lambda x: x.name),
-                sorted([fc, fo], key=lambda x: x.name), f'Embedded dataframebuilder should be fo and fc'
+                sorted([fc, fo], key=lambda x: x.name), f'Embedded features should be fo and fc'
             )
 
         remove_file_if_exists(file2)
 
+
+class TestNP(unittest.TestCase):
+    def test_from_np_good(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fa = ft.FeatureSource('Country', ft.FEATURE_TYPE_CATEGORICAL)
+        fo = ft.FeatureOneHot('Country_OH', ft.FEATURE_TYPE_INT_16, fa)
+        td = ft.TensorDefinition('TestNP', [fo])
+        with en.EnginePandas(num_threads=1) as e:
+            df = e.df_from_csv(td, file, inference=False)
+            n = e.np_from_csv(td, file, inference=False)
+        self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
+        self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
+        self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
+        self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
 
 # test default should always be included even if not in the file
 

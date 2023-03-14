@@ -112,6 +112,31 @@ class TestFeatureExpression(unittest.TestCase):
         )
 
 
+class TestNP(unittest.TestCase):
+    def test_from_np_good(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fs = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
+        fe = ft.FeatureExpression('Expression', ft.FEATURE_TYPE_FLOAT_32, lambda x: x + 1, [fs])
+        td = ft.TensorDefinition('TestNP', [fe])
+        with en.EnginePandas(num_threads=1) as e:
+            df = e.df_from_csv(td, file, inference=False)
+            n = e.np_from_csv(td, file, inference=False)
+        self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
+        self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
+        self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
+        self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
+
+    def test_from_np_bad(self):
+        # Should fail for LEARNING_CATEGORY_NONE
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
+        fe = ft.FeatureExpression('ExpressionDate', ft.FEATURE_TYPE_DATE, test_date_expr, [fd])
+        td = ft.TensorDefinition('TestNP', [fe])
+        with en.EnginePandas(num_threads=1) as e:
+            with self.assertRaises(en.EnginePandasException):
+                _ = e.np_from_csv(td, file, inference=False)
+
+
 def main():
     unittest.main()
 

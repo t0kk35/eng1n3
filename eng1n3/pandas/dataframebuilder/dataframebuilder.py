@@ -11,7 +11,7 @@ from f3atur3s import FeatureFilter
 
 from ..common.exception import EnginePandasException
 
-from .processor import FeatureProcessor
+from .featureprocessor import FeatureProcessor
 from .featuresourceprocessor import FeatureSourceProcessor
 from .featuregrouperprocessor import FeatureGrouperProcessor
 from .featureonehotprocessor import FeatureOneHotProcessor

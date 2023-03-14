@@ -8,10 +8,11 @@ import pathlib
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple
 
-from f3atur3s import Feature, FeatureExpander, TensorDefinition, FeatureSeriesBased
+from f3atur3s import Feature, FeatureExpander, TensorDefinition, FeatureSeriesBased, FeatureSeriesStacked
 from ..common.engine import EngineContext
+from ..common.tensorinstance import TensorInstanceNumpy
 from .common.exception import EnginePandasException
 from .helpers.validation import EnginePandasValidation
 from .dataframebuilder.dataframebuilder import DataFrameBuilder
@@ -43,13 +44,15 @@ class EnginePandas(EngineContext):
     def one_hot_prefix(self):
         return self._one_hot_prefix
 
-    def np_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
-                    time_feature: Optional[Feature] = None, inference: bool = True) -> np.ndarray:
+    def np_from_csv(self, target_tensor_def: Union[TensorDefinition, Tuple[TensorDefinition, ...]],
+                    file: str, delimiter: chr = ',', quote: chr = "'", time_feature: Optional[Feature] = None,
+                    inference: bool = True) -> TensorInstanceNumpy:
         """
         Create a Numpy Array based on a TensorDefinition by reading a file.
 
         Args:
-            target_tensor_def: The input tensor definition. It contains all the features that need to be built.
+            target_tensor_def: The input tensor definition. It contains all the features that need to be built. This
+                function accepts either a single TensorDefinition or a Tuple of TensorDefinitions
             file: File to read. This must be a complete file path
             delimiter: The delimiter used in the file to separate columns. Default is ',' (comma)
             quote: Quote character. Default is \' (single quote)
@@ -63,13 +66,26 @@ class EnginePandas(EngineContext):
         """
         EnginePandasValidation.val_all_same_learning_category(target_tensor_def)
         EnginePandasValidation.val_no_none_learning_category(target_tensor_def)
-        if all([isinstance(f, FeatureSeriesBased) for f in target_tensor_def.features]):
+        EnginePandasValidation.val_same_feature_root_type(target_tensor_def)
+        ttd = (target_tensor_def,) if isinstance(target_tensor_def, TensorDefinition) else target_tensor_def
+        all_features = set([f for td in ttd for f in td.features])
+        if all([isinstance(f, FeatureSeriesBased) for f in all_features]):
             # Build series (Rank 2 features)
-            sp = SeriesBuilder(target_tensor_def.features, inference)
+            EnginePandasValidation.val_one_feature_per_td(target_tensor_def)
+            EnginePandasValidation.val_tds_contain_same_feature_class(target_tensor_def)
+            EnginePandasValidation.val_time_feature_needed_series(time_feature)
+            sp = SeriesBuilder(ttd, inference, self.num_threads)
+            td = TensorDefinition('SeriesLocal', sp.df_features + [time_feature])
+            df = self.df_from_csv(td, file, delimiter, quote, time_feature, inference)
+            x = sp.build(df, time_feature)
+            print(x)
         else:
             # Build array (Rank 1 features)
-            df = self.df_from_csv(target_tensor_def, file, delimiter, quote, time_feature, inference)
-            return df.to_numpy()
+            tda = TensorDefinition('All_r_1', list(all_features))
+            df = self.df_from_csv(tda, file, delimiter, quote, time_feature, inference)
+            # Make 1 numpy per each TensorDefinition
+            ti = tuple([df[td.feature_names].to_numpy() for td in ttd])
+            return TensorInstanceNumpy(ti)
 
     def df_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
                     time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:
@@ -90,8 +106,7 @@ class EnginePandas(EngineContext):
         Returns:
             A Panda with the fields as defined in the tensor_def.
         """
-        EnginePandasValidation.val_time_feature_needed(target_tensor_def, time_feature)
-
+        EnginePandasValidation.val_time_feature_needed_non_series(target_tensor_def, time_feature)
         # Check if file exists
         file_instance = pathlib.Path(file)
         if not file_instance.exists():
