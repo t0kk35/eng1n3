@@ -210,7 +210,7 @@ class EnginePandasValidation:
              None
         """
         for td in (target_tensor_def,) if isinstance(target_tensor_def, TensorDefinition) else target_tensor_def:
-            rt = [f.type.root_type for f in td.features]
+            rt = list(set([f.type.root_type for f in td.features]))
             if len(rt) > 1:
                 raise EnginePandasException(
                     f'Found more than one feature root type. {rt} in TensorDefinition {td.name}. ' +

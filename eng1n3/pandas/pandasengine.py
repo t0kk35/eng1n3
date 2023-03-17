@@ -84,6 +84,7 @@ class EnginePandas(EngineContext):
             tda = TensorDefinition('All_r_1', list(all_features))
             df = self.df_from_csv(tda, file, delimiter, quote, time_feature, inference)
             # Make 1 numpy per each TensorDefinition
+            logger.info(f'Converting {tda.name} to {len(ttd)} numpy arrays')
             ti = tuple([df[td.feature_names].to_numpy() for td in ttd])
             return TensorInstanceNumpy(ti)
 
@@ -170,8 +171,7 @@ class EnginePandas(EngineContext):
         for feature in tensor_def.features:
             if isinstance(feature, FeatureExpander):
                 col_names.extend(
-                    [name for name in df.columns
-                     if name.startswith(feature.base_feature.name + self.one_hot_prefix)]
+                    [name for name in feature.expand_names]
                 )
             else:
                 col_names.append(feature.name)

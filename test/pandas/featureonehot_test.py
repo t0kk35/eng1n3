@@ -154,6 +154,7 @@ class TestOneHot(unittest.TestCase):
         # If a value of a OneHot Feature is NOT in the file without inference, but that value exists during inference,
         # then that value should be removed. That is, except for the default. The default should always be
         # present, even with all 0
+        fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
         fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
         file1 = FILES_DIR + 'engine_test_base_comma.csv'
@@ -191,6 +192,50 @@ class TestOneHot(unittest.TestCase):
 
         remove_file_if_exists(file2)
 
+    def test_with_other_columns(self):
+        # Regression Test, there was a bug that when the one-hot processor wanted to add a column seen in non-inference
+        # mode, and that column was not present, then it tried to convert all items in the df to int8.
+        # Which obviously fails on date and strings and such.
+        fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
+        fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
+        fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
+        file1 = FILES_DIR + 'engine_test_base_comma.csv'
+        file2 = FILES_DIR + 'engine_test_base_comma_remove_line.csv'
+        # Create duplicate of the base_file, but remove the last line. The last line happens to be the line
+        # with the default.
+        remove_file_if_exists(file2)
+        copy_file_remove_first_line(file1, file2)
+        with en.EnginePandas(num_threads=1) as e:
+            td_c = ft.TensorDefinition('All', [fc])
+            df_c = e.df_from_csv(td_c, file1, inference=False)
+            mcc_v = df_c['MCC'].unique()
+            mcc_c = ['MCC' + '__' + m for m in mcc_v]
+            td_o = ft.TensorDefinition('OH', [fd, fo])
+            _ = e.df_from_csv(td_o, file1, inference=False)
+            self.assertEqual(td_o.inference_ready, True, f'The TensorDefinition should be read for inference')
+            self.assertEqual(fo.inference_ready, True, f'One Hot feature should be ready for inference')
+            self.assertListEqual(fo.expand_names, mcc_c)
+            # Now Read file2 in inference mode. It should have all one_hot values from file1
+            df = e.df_from_csv(td_o, file2, inference=True)
+            # Drop the Date Column
+            df = df.drop(['Date'], axis=1)
+            # Run standard tests.
+            self.assertEqual(td_o.inference_ready, True, f'The TensorDefinition should still be ready for inference')
+            self.assertEqual(fo.inference_ready, True, f'One Hot feature should be still ready for inference')
+            self.assertEqual(len(df.columns), len(mcc_c), f'Col number must match values {len(df.columns), len(mcc_c)}')
+            self.assertListEqual(list(df.columns), mcc_c, f'Names of columns must match values {df.columns}')
+            self.assertEqual(fo.inference_ready, True, f'One Hot feature should be ready for inference')
+            self.assertListEqual(fo.expand_names, mcc_c, f'Expanded names should match the column names')
+            self.assertEqual(td_o.rank, 2, f'This should have been a rank 2 tensor. Got {td_o.rank}')
+            self.assertListEqual(td_o.binary_features(True), fo.expand(), f'Expanded Feature not correct')
+            self.assertEqual(len(td_o.embedded_features), 3, f'Expecting 2 embedded feat {len(td_o.embedded_features)}')
+            self.assertListEqual(
+                sorted(td_o.embedded_features, key=lambda x: x.name),
+                sorted([fd, fc, fo], key=lambda x: x.name), f'Embedded features should be fo and fc'
+            )
+
+        remove_file_if_exists(file2)
+
 
 class TestNP(unittest.TestCase):
     def test_from_np_good(self):
@@ -206,7 +251,7 @@ class TestNP(unittest.TestCase):
         self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
         self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
 
-# test default should always be included even if not in the file
+# TODO test default should always be included even if not in the file, not sure that is the case at present.
 
 
 def main():

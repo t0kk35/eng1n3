@@ -2,6 +2,7 @@
 Feature Processor for the creation of FeatureOneHot features.
 (c) 2023 tsm
 """
+import numpy as np
 import pandas as pd
 from typing import List
 
@@ -38,8 +39,8 @@ class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):
                 x = [n for n in f.expand_names if n not in defined]
                 n_defined.extend(x)
             if len(n_defined) > 0:
-                kwargs = {nd: 0 for nd in n_defined}
-                df = df.assign(**kwargs).astype('int8')
+                kwargs = {nd: np.zeros((len(df),), dtype='int8') for nd in n_defined}
+                df = df.assign(**kwargs)
             # Remove features not seen at non-inference (training) but seen at inference
             n_defined = []
             for f in self.features:
