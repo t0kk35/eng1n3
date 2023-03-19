@@ -214,7 +214,7 @@ class EnginePandasValidation:
             if len(rt) > 1:
                 raise EnginePandasException(
                     f'Found more than one feature root type. {rt} in TensorDefinition {td.name}. ' +
-                    f'This process can only handle feature of the same root type, for instance only int or only float'
+                    f'This process can only handle features of the same root type, for instance only INT or only FLOAT'
                 )
 
     @staticmethod

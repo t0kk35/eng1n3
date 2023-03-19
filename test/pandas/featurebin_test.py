@@ -222,6 +222,7 @@ class TestNP(unittest.TestCase):
         self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
         self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
 
+
 def main():
     unittest.main()
 

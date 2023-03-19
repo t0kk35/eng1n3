@@ -3,9 +3,6 @@ Concat Feature Tests
 (c) 2023 tsm
 """
 import unittest
-import os
-
-import numpy as np
 
 import f3atur3s as ft
 import eng1n3.pandas as en

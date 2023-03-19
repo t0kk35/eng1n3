@@ -3,9 +3,11 @@ Tensor instance classes, these will go into our NN models.
 (c) 2023 3ngin3
 """
 import numpy as np
-from abc import ABC
+from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Any
+from f3atur3s import TensorDefinition, LearningCategory
+
+from typing import List, Tuple, Union
 
 
 class TensorInstanceException(Exception):
@@ -14,7 +16,41 @@ class TensorInstanceException(Exception):
 
 
 class TensorInstance(ABC):
-    pass
+    @property
+    @abstractmethod
+    def target_tensor_def(self) -> Tuple[TensorDefinition, ...]:
+        pass
+
+    @property
+    @abstractmethod
+    def label_indexes(self) -> Tuple[int, ...]:
+        pass
+
+    @label_indexes.setter
+    @abstractmethod
+    def label_indexes(self, indexes: Union[int, Tuple[int, ...]]):
+        pass
+
+    @property
+    @abstractmethod
+    def number_of_lists(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def learning_categories(self) -> Tuple[LearningCategory, ...]:
+        pass
+
+    def val_indexes_in_range(self, indexes: Tuple[int, ...]):
+        for index in indexes:
+            if index < 0:
+                raise TensorInstanceException(
+                    f'Indexes can not be negative. Index as {index}'
+                )
+            elif index > self.number_of_lists - 1:
+                raise TensorInstanceException(
+                    f'Index <{index}> out of range, this instance only has {self.number_of_lists} entries'
+                )
 
 
 class TensorInstanceNumpy(TensorInstance):
@@ -23,11 +59,14 @@ class TensorInstanceNumpy(TensorInstance):
     consistently across a list of numpy arrays.
 
     Args:
-        numpy_list (List[np.ndarray]) : A List of numpy arrays to include in the TensorInstance. Important!
+        numpy_lists (List[np.ndarray]) : A List of numpy arrays to include in the TensorInstance. Important!
             The numpy lists must all be of the same length. (They must have the same batch dimension)
     """
-    def __init__(self, numpy_lists: Tuple[np.ndarray, ...]):
+    def __init__(self, target_tensor_def: Tuple[TensorDefinition, ...], numpy_lists: Tuple[np.ndarray, ...]):
+        self._label_indexes: Tuple[int, ...] = tuple()
+        self._target_tensor_def = target_tensor_def
         self._numpy_lists = numpy_lists
+        self._learning_categories = self._get_learning_categories()
         self._val_all_same_0_dim()
 
     def __getitem__(self, subscript) -> 'TensorInstanceNumpy':
@@ -48,6 +87,33 @@ class TensorInstanceNumpy(TensorInstance):
 
     def __repr__(self):
         return f'TensorInstance with shapes: {self.shapes}'
+
+    @property
+    def label_indexes(self) -> Tuple[int, ...]:
+        if len(self._label_indexes) != 0:
+            return self._label_indexes
+        else:
+            raise TensorInstanceException(
+                f'The label_index property has not been set. Please tell the TensorInstance where is can ' +
+                f'find the training label by calling the label_indexes setter function'
+            )
+
+    @label_indexes.setter
+    def label_indexes(self, indexes: Union[int, Tuple[int, ...]]):
+        if isinstance(indexes, int):
+            self.val_indexes_in_range((indexes,))
+            self._label_indexes = (indexes,)
+        elif isinstance(indexes, Tuple):
+            self.val_indexes_in_range(indexes)
+            self._label_indexes = indexes
+        else:
+            raise TensorInstanceException(
+                f'Unexpected value for the <indexes> parameter, got {indexes}, expected an int or Tuple of ints'
+            )
+
+    @property
+    def target_tensor_def(self) -> Tuple[TensorDefinition, ...]:
+        return self._target_tensor_def
 
     @property
     def numpy_lists(self) -> Tuple[np.ndarray, ...]:
@@ -89,6 +155,10 @@ class TensorInstanceNumpy(TensorInstance):
         """
         return tuple([n.dtype.name for n in self.numpy_lists])
 
+    @property
+    def learning_categories(self) -> Tuple[LearningCategory, ...]:
+        return self._learning_categories
+
     def unique(self, index: int) -> (Tuple[int, ...], Tuple[int, ...]):
         """
         Return the unique sorted entries and counts of a specific array within this TensorInstanceNumpy
@@ -115,7 +185,34 @@ class TensorInstanceNumpy(TensorInstance):
         """
         permutation = np.random.permutation(self.numpy_lists[0].shape[0])
         shuffled = tuple([n[permutation] for n in self.numpy_lists])
-        return TensorInstanceNumpy(shuffled)
+        return TensorInstanceNumpy(self.target_tensor_def, shuffled)
+
+    def split_sequential(self,
+                         val_number: int,
+                         test_number: int
+                         ) -> Tuple['TensorInstanceNumpy', 'TensorInstanceNumpy', 'TensorInstanceNumpy']:
+        """
+        Split a numpy list into training, validation and test. This selects purely sequentially, it does not order
+        so if the order of some 'time' aspect is important, then make sure to order the list first!
+        The first portion of the data is training, the middle is the validation and the end of the data is the test.
+        This is almost always the best way to split transactional data. First the 'test_number' of records data is
+        taken from the end of the arrays. Of what is left the 'val_number' is taken all that is left is training.
+
+        Args:
+            val_number (int): Number of records to allocate to the validation set
+            test_number (int): Number of records to allocate to the test set.
+
+        Returns:
+            Tuple of 3 TensorInstance objects containing the training, validation and test data respectively
+        """
+        self._val_val_plus_test_smaller_than_length(val_number, test_number)
+        # Take x from end of lists as test
+        test = self._slice(from_row_number=len(self)-test_number, to_row_number=len(self))
+        # Take another x from what is left at the end and not in test
+        val = self._slice(from_row_number=len(self)-test_number-val_number, to_row_number=len(self)-test_number)
+        # Take rest
+        train = self._slice(to_row_number=len(self)-test_number-val_number)
+        return train, val, test
 
     def _slice(self, from_row_number=None, to_row_number=None) -> 'TensorInstanceNumpy':
         """
@@ -140,7 +237,20 @@ class TensorInstanceNumpy(TensorInstance):
             sliced = tuple([n[:to_row_number] for n in self.numpy_lists])
         else:
             sliced = tuple([n for n in self.numpy_lists])
-        return TensorInstanceNumpy(sliced)
+        return TensorInstanceNumpy(self.target_tensor_def, sliced)
+
+    def _get_learning_categories(self) -> Tuple[LearningCategory, ...]:
+        lcs: List[LearningCategory] = []
+        for td in self.target_tensor_def:
+            lc = list(set([f.learning_category for f in td.features]))
+            if len(lc) > 1:
+                raise TensorInstanceException(
+                    f'TensorDefinition {td.name} contained more than one Learning category. Found {lc}. Make sure ' +
+                    f'each TensorDefinition has a single unique Learning Category'
+                )
+            else:
+                lcs.extend(lc)
+        return tuple(lcs)
 
     def _val_all_same_0_dim(self):
         """
@@ -183,4 +293,11 @@ class TensorInstanceNumpy(TensorInstance):
         if not np.issubdtype(self.numpy_lists[index].dtype, np.integer):
             raise TensorInstanceException(
                 f'List at index <{index}> is not of integer type. That is unexpected'
+            )
+
+    def _val_val_plus_test_smaller_than_length(self, validation: int, test: int):
+        if validation + test >= len(self):
+            raise TensorInstanceException(
+                f'The number of validation <{validation}> + the number of test <{test}> records. Is bigger than the ' +
+                f'Length of the Numpy List <{len(self)}> '
             )

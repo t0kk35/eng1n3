@@ -3,9 +3,8 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureGrouper usage
 (c) 2020 tsm
 """
 import unittest
-import os
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import timedelta
 from statistics import stdev
 from typing import List
 

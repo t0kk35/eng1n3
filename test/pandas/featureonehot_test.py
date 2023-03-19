@@ -154,7 +154,7 @@ class TestOneHot(unittest.TestCase):
         # If a value of a OneHot Feature is NOT in the file without inference, but that value exists during inference,
         # then that value should be removed. That is, except for the default. The default should always be
         # present, even with all 0
-        fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
+        _ = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
         fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
         file1 = FILES_DIR + 'engine_test_base_comma.csv'

@@ -5,7 +5,6 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureSource usage
 import unittest
 
 import numpy as np
-import pandas as pd
 
 import f3atur3s as ft
 
@@ -55,7 +54,7 @@ class TestReading(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_pipe.csv'
         with en.EnginePandas(num_threads=1) as e:
             df = e.df_from_csv(ft.TensorDefinition('All', [f for f, d, t in TestReading.features]),
-                            file, inference=False, delimiter='|')
+                               file, inference=False, delimiter='|')
             self.assertEqual(len(df.columns), len(TestReading.features),
                              f'Incorrect number of columns for read all test. got {len(df.columns)}')
             for (f, _, t), c in zip(TestReading.features, df.columns):
@@ -82,7 +81,7 @@ class TestDate(unittest.TestCase):
             with self.assertRaises(ValueError):
                 _ = e.df_from_csv(td, file, inference=False)
 
-    # TODO need test with multiple source dataframebuilder that are dates. There was an iterator problem?
+    # TODO need test with multiple source features that are dates. There was an iterator problem?
 
 
 class TestCategorical(unittest.TestCase):

@@ -3,7 +3,6 @@ Unit Tests for PandasNumpy Engine, specifically the FeatureRatio usage
 (c) 2023 d373c7
 """
 import unittest
-import os
 import f3atur3s as ft
 import eng1n3.pandas as en
 

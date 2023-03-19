@@ -1,9 +1,9 @@
 """
-Unit Tests for PandasNumpy Engine, specifically the FeatureBin usage
+Unit Tests for PandasNumpy Engine, specifically the FeatureExpression usage
 (c) 2020 tsm
 """
 import unittest
-import os
+
 import pandas as pd
 from datetime import datetime, timedelta
 

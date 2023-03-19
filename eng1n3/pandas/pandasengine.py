@@ -61,12 +61,12 @@ class EnginePandas(EngineContext):
                 contains Features that need a time dimension in order to build.
             inference: (bool) Indicate if we are inferring or not. If True [COMPLETE]
 
-        Return:
-             A Numpy Array with the features included in the target_tensor_def
+        Returns:
+             TensorInstanceNumpy with the Numpy arrays as defined in the target_tensor_def
         """
+        EnginePandasValidation.val_same_feature_root_type(target_tensor_def)
         EnginePandasValidation.val_all_same_learning_category(target_tensor_def)
         EnginePandasValidation.val_no_none_learning_category(target_tensor_def)
-        EnginePandasValidation.val_same_feature_root_type(target_tensor_def)
         ttd = (target_tensor_def,) if isinstance(target_tensor_def, TensorDefinition) else target_tensor_def
         all_features = set([f for td in ttd for f in td.features])
         if all([isinstance(f, FeatureSeriesBased) for f in all_features]):
@@ -86,7 +86,7 @@ class EnginePandas(EngineContext):
             # Make 1 numpy per each TensorDefinition
             logger.info(f'Converting {tda.name} to {len(ttd)} numpy arrays')
             ti = tuple([df[td.feature_names].to_numpy() for td in ttd])
-            return TensorInstanceNumpy(ti)
+            return TensorInstanceNumpy(ttd, ti)
 
     def df_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
                     time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:

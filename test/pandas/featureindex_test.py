@@ -1,5 +1,5 @@
 """
-Unit Tests for PandasNumpy Engine, specifically the FeatureOneIndex usage
+Unit Tests for PandasNumpy Engine, specifically the FeatureIndex usage
 (c) 2020 d373c7
 """
 import unittest

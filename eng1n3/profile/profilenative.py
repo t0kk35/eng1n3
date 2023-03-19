@@ -78,10 +78,10 @@ class Profile(Generic[IN, OUT], ABC):
     @property
     def base_features(self) -> List[Feature]:
         """
-        Property which return the base dataframebuilder that are needed to contribute to the profile, it is the unique list
+        Property which return the base features that are needed to contribute to the profile, it is the unique list
         of base_features contained in the FeatureGroupers to
 
-        Returns: (List[Feature]) Unique list of base dataframebuilder.
+        Returns: (List[Feature]) Unique list of base features.
         """
         lst = [f.base_feature for f in self.features]
         # Not using set here to make unique because we want to keep the order
@@ -90,10 +90,10 @@ class Profile(Generic[IN, OUT], ABC):
     @property
     def filter_features(self) -> List[FeatureFilter]:
         """
-        Property which return the filter dataframebuilder that are needed to contribute to the profile, it is the unique list
+        Property which return the filter features that are needed to contribute to the profile, it is the unique list
         of filter_features contained in the FeatureGroupers to
 
-        Returns: (List[Feature]) Unique list of filter dataframebuilder.
+        Returns: (List[Feature]) Unique list of filter features.
         """
         lst = [f.filter_feature for f in self.features if f.filter_feature is not None]
         # Not using set here to make unique because we want to keep the order
@@ -140,7 +140,7 @@ class ProfileFieldBase(ProfileField[AI, AO], Generic[AI, AO], ABC):
 
         Args:
             f: (Feature). The feature to look up.
-            feature_list: (List[Feature]). A list of dataframebuilder to use a lookup list.
+            feature_list: (List[Feature]). A list of features to use a lookup list.
 
         Returns: (int). Index of f in feature_list
         """
