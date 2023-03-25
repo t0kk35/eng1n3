@@ -85,8 +85,11 @@ class EnginePandas(EngineContext):
             df = self.df_from_csv(tda, file, delimiter, quote, time_feature, inference)
             # Make 1 numpy per each TensorDefinition
             logger.info(f'Converting {tda.name} to {len(ttd)} numpy arrays')
-            ti = tuple([df[td.feature_names].to_numpy() for td in ttd])
-            return TensorInstanceNumpy(ttd, ti)
+            tis = tuple([df[td.feature_names].to_numpy() for td in ttd])
+            # Set the rank of each TensorDefinition
+            for ti, td in zip(tis, ttd):
+                td.rank = len(ti.shape)
+            return TensorInstanceNumpy(ttd, tis)
 
     def df_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
                     time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:

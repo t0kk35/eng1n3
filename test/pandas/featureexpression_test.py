@@ -117,14 +117,16 @@ class TestNP(unittest.TestCase):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         fs = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
         fe = ft.FeatureExpression('Expression', ft.FEATURE_TYPE_FLOAT_32, lambda x: x + 1, [fs])
-        td = ft.TensorDefinition('TestNP', [fe])
+        td1 = ft.TensorDefinition('TestNP1', [fe])
+        td2 = ft.TensorDefinition('TestNP1', [fe])
         with en.EnginePandas(num_threads=1) as e:
-            df = e.df_from_csv(td, file, inference=False)
-            n = e.np_from_csv(td, file, inference=False)
+            df = e.df_from_csv(td1, file, inference=False)
+            n = e.np_from_csv(td2, file, inference=False)
         self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
         self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
         self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
         self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
+        self.assertEqual(td1.rank, td2.rank, f'Expecting the same rank {td1.rank, td2.rank}')
 
     def test_from_np_bad(self):
         # Should fail for LEARNING_CATEGORY_NONE

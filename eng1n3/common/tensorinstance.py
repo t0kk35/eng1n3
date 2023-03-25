@@ -12,7 +12,7 @@ from typing import List, Tuple, Union
 
 class TensorInstanceException(Exception):
     def __init__(self, message: str):
-        super().__init__("Error Numpy-List: " + message)
+        super().__init__("Error TensorInstance: " + message)
 
 
 class TensorInstance(ABC):
@@ -208,11 +208,26 @@ class TensorInstanceNumpy(TensorInstance):
         self._val_val_plus_test_smaller_than_length(val_number, test_number)
         # Take x from end of lists as test
         test = self._slice(from_row_number=len(self)-test_number, to_row_number=len(self))
+        self._copy_across_properties(self, test)
         # Take another x from what is left at the end and not in test
         val = self._slice(from_row_number=len(self)-test_number-val_number, to_row_number=len(self)-test_number)
+        self._copy_across_properties(self, val)
         # Take rest
         train = self._slice(to_row_number=len(self)-test_number-val_number)
+        self._copy_across_properties(self, train)
         return train, val, test
+
+    @staticmethod
+    def _copy_across_properties(old_ti: 'TensorInstanceNumpy', new_ti: 'TensorInstanceNumpy') -> None:
+        """
+        Small helper method to copy across some properties from the old to a new TensorDefinitionNumpy. We'll
+        use this when we create a new instance from an old one.
+
+        Args:
+            old_ti: The existing TensorDefinitionNupy.
+            new_ti: The new target TensorDefinitionNumpy into which we want to copy the properties from the old intance
+        """
+        new_ti.label_indexes = old_ti.label_indexes
 
     def _slice(self, from_row_number=None, to_row_number=None) -> 'TensorInstanceNumpy':
         """
@@ -276,7 +291,7 @@ class TensorInstanceNumpy(TensorInstance):
             raise TensorInstanceException(f'Slice index can not be smaller than 0. Got {index}')
         if index > len(self):
             raise TensorInstanceException(
-                f'Slice index can not go beyond length of lists. Got {index}, length {len(self.numpy_lists)}'
+                f'Slice index can not go beyond length of lists. Got {index}, length {len(self)}'
             )
 
     def _val_is_integer_type(self, index: int):

@@ -38,6 +38,9 @@ class TestReading(unittest.TestCase):
                 self.assertEqual(df.columns[0], f.name, f'Wrong panda column for read test {d}. Got {df.columns[0]}')
                 self.assertEqual(df[f.name].dtype, t, f'Unexpected type. Got <{df[f.name].dtype}>. Expected <{t}> ')
                 self.assertEqual(td.inference_ready, True, 'TensorDefinition Should have been ready for inference')
+                self.assertEqual(td.rank, 2, f'Expected rank to be 2. Got {td.rank}')
+                self.assertEqual(len(f.embedded_features), 0, f'A source has embedded feature {f.embedded_features}')
+                self.assertEqual(f.inference_ready, True, f'A Source features should always be ready for inference')
 
     def test_read_base_all(self):
         file = FILES_DIR + 'engine_test_base_comma.csv'
@@ -112,14 +115,16 @@ class TestNP(unittest.TestCase):
     def test_from_np_good(self):
         file = FILES_DIR + 'engine_test_base_comma.csv'
         fs = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
-        td = ft.TensorDefinition('TestNP', [fs])
+        td1 = ft.TensorDefinition('TestNP1', [fs])
+        td2 = ft.TensorDefinition('TestNP2', [fs])
         with en.EnginePandas(num_threads=1) as e:
-            df = e.df_from_csv(td, file, inference=False)
-            n = e.np_from_csv(td, file, inference=False)
+            df = e.df_from_csv(td1, file, inference=False)
+            n = e.np_from_csv(td2, file, inference=False)
         self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
         self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
         self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
         self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
+        self.assertEqual(td1.rank, td2.rank, f'Expected Rank to be the same {td1.rank} {td2.rank}')
 
     def test_from_np_bad(self):
         # Should fail for LEARNING_CATEGORY_NONE

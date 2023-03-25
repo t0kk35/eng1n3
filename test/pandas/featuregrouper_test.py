@@ -123,6 +123,7 @@ class TestGrouperFeature(unittest.TestCase):
                             # Do almost equal. There's a slight difference in stddev between pandas and the stats impl
                             self.assertAlmostEqual(amt, g_amt, 6, f'Expected {grouper_name} to be {g_amt}')
                     prev_dt = row[fd.name]
+        # TODO should really check some of the other standard tests like embedded features, rank, inference etc..
 
     def test_grouped_multiple_groups(self):
         # Base test. Create single all aggregates on 2 groups
@@ -213,14 +214,16 @@ class TestNP(unittest.TestCase):
         fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
         fg = ft.FeatureGrouper(
             '2_day_sum', ft.FEATURE_TYPE_FLOAT_32, fa, fr, None, ft.TIME_PERIOD_DAY, 2, ft.AGGREGATOR_SUM)
-        td = ft.TensorDefinition('TestNP', [fg])
+        td1 = ft.TensorDefinition('TestNP1', [fg])
+        td2 = ft.TensorDefinition('TestNP2', [fg])
         with en.EnginePandas(num_threads=1) as e:
-            df = e.df_from_csv(td, file, inference=False, time_feature=fd)
-            n = e.np_from_csv(td, file, inference=False, time_feature=fd)
+            df = e.df_from_csv(td1, file, inference=False, time_feature=fd)
+            n = e.np_from_csv(td2, file, inference=False, time_feature=fd)
         self.assertEqual(type(n), en.TensorInstanceNumpy, f'Did not get TensorInstanceNumpy. But {type(n)}')
         self.assertEqual(len(n.numpy_lists), 1, f'Expected only one list. Got {len(n.numpy_lists)}')
         self.assertEqual(len(n), len(df), f'Lengths not equal {len(df)}, {len(n)}')
         self.assertTrue(np.all(np.equal(df.to_numpy(), n.numpy_lists[0])), f'from np not OK. {df}, {n.numpy_lists[0]}')
+        self.assertEqual(td1.rank, td2.rank, f'Expecting the same rank {td1.rank} {td2.rank}')
 
 
 def main():
