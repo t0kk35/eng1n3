@@ -7,7 +7,7 @@ from typing import Dict, Type, List
 
 from f3atur3s import Feature, FeatureHelper, FeatureSource, FeatureOneHot, FeatureIndex, FeatureBin, FeatureGrouper
 from f3atur3s import FeatureConcat, FeatureExpression, FeatureRatio, FeatureNormalizeScale, FeatureNormalizeStandard
-from f3atur3s import FeatureFilter
+from f3atur3s import FeatureFilter, FeatureDateTimeFormat
 
 from ..common.exception import EnginePandasException
 
@@ -22,7 +22,7 @@ from .featureexpressionprocessor import FeatureExpressionProcessor
 from .featureratioprocessor import FeatureRatioProcessor
 from .featurenormalizescaleprocessor import FeatureNormalizeScaleProcessor
 from .featurenormalizestandardprocessor import FeatureNormalizeStandardProcessor
-
+from .featuredatetimeformatprocessor import FeatureDateTimeFormatProcessor
 
 class DataFrameBuilder:
     def __init__(self, features: List[Feature], file: str, delimiter: chr, quote: chr, num_threads: int,
@@ -59,7 +59,9 @@ class DataFrameBuilder:
             FeatureNormalizeStandard:
                 FeatureNormalizeStandardProcessor(self._features, self._inference),
             FeatureGrouper:
-                FeatureGrouperProcessor(self._features, self._num_threads, self._time_feature, self._inference)
+                FeatureGrouperProcessor(self._features, self._num_threads, self._time_feature, self._inference),
+            FeatureDateTimeFormat:
+                FeatureDateTimeFormatProcessor(self._features, self._inference)
         }
 
     @staticmethod

@@ -46,7 +46,7 @@ class SeriesBuilder:
     def get_processor(self, feature_type: Type[FeatureSeriesBased]) -> SeriesProcessor:
         return self._feature_processors[feature_type]
 
-    def build(self, df: pd.DataFrame, time_feature: Feature) -> TensorInstanceNumpy:
+    def build(self, df: pd.DataFrame, time_feature: Feature) -> Tuple[np.ndarray]:
         return self._feature_processor.process(df, time_feature, self.num_threads)
 
     @staticmethod

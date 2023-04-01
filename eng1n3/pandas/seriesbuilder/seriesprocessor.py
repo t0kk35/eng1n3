@@ -35,7 +35,7 @@ class SeriesProcessor(Generic[T], ABC):
         return self._inference
 
     @abstractmethod
-    def process(self, df: pd.DataFrame, time_field: Feature, num_threads: int) -> TensorInstanceNumpy:
+    def process(self, df: pd.DataFrame, time_field: Feature, num_threads: int) -> Tuple[np.ndarray, ...]:
         pass
 
     @abstractmethod

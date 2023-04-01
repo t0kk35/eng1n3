@@ -38,7 +38,7 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
     def __init__(self, target_tensor_def: Tuple[TensorDefinition, ...], inference: bool):
         super(FeatureSeriesStackedProcessor, self).__init__(FeatureSeriesStacked, target_tensor_def, inference)
 
-    def process(self, df: pd.DataFrame, time_feature: Feature, num_threads: int) -> TensorInstanceNumpy:
+    def process(self, df: pd.DataFrame, time_feature: Feature, num_threads: int) -> Tuple[np.ndarray, ...]:
 
         logger.info(f'Start creating stacked series for Target Tensor Definitions '
                     f'{[td.name for td in self.target_tensor_def]} using {num_threads} process(es)')
@@ -75,7 +75,7 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
             td.shapes = (-1, *s.shape[1:])
         logger.info(f'Series Shapes={[td.shapes for td in self.target_tensor_def]}')
 
-        return TensorInstanceNumpy(tuple(series))
+        return tuple(series)
 
     @staticmethod
     def _process_key_stacked(rows: pd.DataFrame, key_feature: Feature,
