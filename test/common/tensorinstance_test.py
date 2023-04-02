@@ -166,30 +166,31 @@ class TestTensorInstanceBase(unittest.TestCase):
 
 
 class TestLabelIndex(unittest.TestCase):
-    """Some tests to see if the can set and get the label indexes"""
+    """Some tests to see if the TensorInstance can find the label index """
     def test_set_label_index_good_single(self):
-        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_FLOAT)
-        f2 = ft.FeatureSource('f2', ft.FEATURE_TYPE_FLOAT)
-        td = ft.TensorDefinition('td', [f1, f2])
+        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_INT_8)
+        f2 = ft.FeatureLabelBinary('f2', ft.FEATURE_TYPE_INT_8, f1)
+        td1 = ft.TensorDefinition('td1', [f1])
+        td2 = ft.TensorDefinition('td2', [f2])
         x = np.arange(5)
         y = np.arange(5)
         c = (x, y)
-        n = en.TensorInstanceNumpy((td,), c)
-        label_ind = 1
-        n.label_indexes = label_ind
-        self.assertTupleEqual((label_ind,), n.label_indexes, f'Label indexes not equal {n.label_indexes}, {label_ind}')
+        n = en.TensorInstanceNumpy((td1, td2), c)
+        self.assertTupleEqual((1,), n.label_indexes, f'Label indexes not equal {n.label_indexes}, 1')
 
-    def test_set_label_index_good_as_tuple(self):
-        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_FLOAT)
-        f2 = ft.FeatureSource('f2', ft.FEATURE_TYPE_FLOAT)
-        td = ft.TensorDefinition('td', [f1, f2])
+    def test_set_label_index_good_multiple(self):
+        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_INT_8)
+        f2 = ft.FeatureLabelBinary('f2', ft.FEATURE_TYPE_INT_8, f1)
+        f3 = ft.FeatureLabelBinary('f2', ft.FEATURE_TYPE_INT_8, f1)
+        td1 = ft.TensorDefinition('td1', [f1])
+        td2 = ft.TensorDefinition('td2', [f2])
+        td3 = ft.TensorDefinition('td3', [f3])
         x = np.arange(5)
         y = np.arange(5)
-        c = (x, y)
-        n = en.TensorInstanceNumpy((td,), c)
-        label_ind = 1
-        n.label_indexes = (label_ind,)
-        self.assertTupleEqual((label_ind,), n.label_indexes, f'Label indexes not equal {n.label_indexes}, {label_ind}')
+        z = np.arange(5)
+        c = (x, y, z)
+        n = en.TensorInstanceNumpy((td2, td1, td3), c)
+        self.assertTupleEqual((0, 2), n.label_indexes, f'Label indexes not equal {n.label_indexes}, (0, 2)')
 
     def test_set_label_index_not_set(self):
         f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_FLOAT)
@@ -202,22 +203,6 @@ class TestLabelIndex(unittest.TestCase):
         # Should fail as the label_indexes were not set.
         with self.assertRaises(en.TensorInstanceException):
             _ = n.label_indexes
-
-    def test_set_label_index_not_in_range(self):
-        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_FLOAT)
-        f2 = ft.FeatureSource('f2', ft.FEATURE_TYPE_FLOAT)
-        td = ft.TensorDefinition('td', [f1, f2])
-        x = np.arange(5)
-        y = np.arange(5)
-        c = (x, y)
-        n = en.TensorInstanceNumpy((td,), c)
-        # Should fail as the label_indexes are not correct.
-        with self.assertRaises(en.TensorInstanceException):
-            n.label_indexes = -1
-        with self.assertRaises(en.TensorInstanceException):
-            n.label_indexes = 2
-        with self.assertRaises(en.TensorInstanceException):
-            n.label_indexes = 'n'
 
 
 def main():

@@ -76,6 +76,40 @@ class TestNormalizeScale(unittest.TestCase):
                 sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
             )
 
+    def test_float_down_cast(self):
+        # Base feature is Float64 and will be down-cast to float32
+        fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_64)
+        s_name = 'AmountScale'
+        s_type = ft.FEATURE_TYPE_FLOAT_32
+        fs = ft.FeatureNormalizeScale(s_name, s_type, fa)
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        with en.EnginePandas(num_threads=1) as e:
+            td = ft.TensorDefinition('All', [fa])
+            df1 = e.df_from_csv(td, file, inference=False)
+            mn = df1['Amount'].min()
+            mx = df1['Amount'].max()
+            df1['scale'] = (df1['Amount'] - mn) / (mx-mn)
+            df1['scale'] = df1['scale'].astype('float32')
+            td2 = ft.TensorDefinition('Derived', [fs])
+            df2 = e.df_from_csv(td2, file, inference=False)
+            self.assertEqual(len(df2.columns), 1, f'Only one columns should have been returned')
+            self.assertEqual(df2.columns[0], s_name, f'Column name is not correct {df2.columns[0]}')
+            self.assertTrue(df1['scale'].equals(df2[s_name]), 'Series not equal')
+            self.assertEqual(df2.iloc[:, 0].dtype.name, 'float32', f'Expecting a "float32" data type')
+            self.assertEqual(fs.learning_category, ft.LEARNING_CATEGORY_CONTINUOUS, f'Expecting Continuous LC')
+            self.assertEqual(fs.inference_ready, True, f'Feature should now be inference ready')
+            self.assertListEqual(fs.embedded_features, [fa], 'Should have had fa as embedded features')
+            self.assertEqual(fs.maximum, mx, f'Maximum not set correctly {fs.maximum}')
+            self.assertEqual(fs.minimum, mn, f'Minimum not set correctly {fs.maximum}')
+            self.assertEqual(td2.inference_ready, True, f'Tensor should be ready for inference')
+            self.assertEqual(td2.rank, 2, f'This should have been a rank 2 tensor. Got {td.rank}')
+            self.assertListEqual(td2.continuous_features(), [fs], f'Expanded Feature not correct')
+            self.assertEqual(len(td2.embedded_features), 2, f'Expecting 2 embed feats {len(td.embedded_features)}')
+            self.assertListEqual(
+                sorted(td2.embedded_features, key=lambda x: x.name),
+                sorted([fs, fa], key=lambda x: x.name), f'Embedded features should be fs and fa'
+            )
+
     def test_read_w_logs_non_inference(self):
         # If logs are defined, then the amount should be logged first and then the normalizer applied.
         fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT)

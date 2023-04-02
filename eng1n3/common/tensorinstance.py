@@ -5,9 +5,9 @@ Tensor instance classes, these will go into our NN models.
 import numpy as np
 from abc import ABC, abstractmethod
 
-from f3atur3s import TensorDefinition, LearningCategory
+from f3atur3s import TensorDefinition, LearningCategory, FeatureLabel
 
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 
 class TensorInstanceException(Exception):
@@ -24,11 +24,6 @@ class TensorInstance(ABC):
     @property
     @abstractmethod
     def label_indexes(self) -> Tuple[int, ...]:
-        pass
-
-    @label_indexes.setter
-    @abstractmethod
-    def label_indexes(self, indexes: Union[int, Tuple[int, ...]]):
         pass
 
     @property
@@ -63,7 +58,7 @@ class TensorInstanceNumpy(TensorInstance):
             The numpy lists must all be of the same length. (They must have the same batch dimension)
     """
     def __init__(self, target_tensor_def: Tuple[TensorDefinition, ...], numpy_lists: Tuple[np.ndarray, ...]):
-        self._label_indexes: Tuple[int, ...] = tuple()
+        self._label_indexes: Tuple[int, ...] = self._find_label_indexes(target_tensor_def)
         self._target_tensor_def = target_tensor_def
         self._numpy_lists = numpy_lists
         self._learning_categories = self._get_learning_categories()
@@ -94,21 +89,8 @@ class TensorInstanceNumpy(TensorInstance):
             return self._label_indexes
         else:
             raise TensorInstanceException(
-                f'The label_index property has not been set. Please tell the TensorInstance where is can ' +
-                f'find the training label by calling the label_indexes setter function'
-            )
-
-    @label_indexes.setter
-    def label_indexes(self, indexes: Union[int, Tuple[int, ...]]):
-        if isinstance(indexes, int):
-            self.val_indexes_in_range((indexes,))
-            self._label_indexes = (indexes,)
-        elif isinstance(indexes, Tuple):
-            self.val_indexes_in_range(indexes)
-            self._label_indexes = indexes
-        else:
-            raise TensorInstanceException(
-                f'Unexpected value for the <indexes> parameter, got {indexes}, expected an int or Tuple of ints'
+                f'The label_index property has not been set. This most likely means the TensorInstance does not ' +
+                f'contain a TensorDefinition with "FeatureLabel" class features in it'
             )
 
     @property
@@ -218,6 +200,21 @@ class TensorInstanceNumpy(TensorInstance):
         return train, val, test
 
     @staticmethod
+    def _find_label_indexes(target_tensor_def: Tuple[TensorDefinition, ...]) -> Tuple[int, ...]:
+        """
+        Local method that tries to find out what indexes are the labels in the data set (if any). Label
+        TensorDefinitions are TensorDefinitions that only contain feature of type 'FeatureLabel'.
+
+        Args:
+             target_tensor_def: A tuple of TensorDefinitions to check
+
+        Returns:
+            A tuple of ints of (potentially empty) that are the indexes of the lists that hold the labels.
+        """
+        ind = [i for i, td in enumerate(target_tensor_def) if all([isinstance(f, FeatureLabel) for f in td.features])]
+        return tuple(ind)
+
+    @staticmethod
     def _copy_across_properties(old_ti: 'TensorInstanceNumpy', new_ti: 'TensorInstanceNumpy') -> None:
         """
         Small helper method to copy across some properties from the old to a new TensorDefinitionNumpy. We'll
@@ -225,9 +222,9 @@ class TensorInstanceNumpy(TensorInstance):
 
         Args:
             old_ti: The existing TensorDefinitionNupy.
-            new_ti: The new target TensorDefinitionNumpy into which we want to copy the properties from the old intance
+            new_ti: The new target TensorDefinitionNumpy into which we want to copy the properties from the old instance
         """
-        new_ti.label_indexes = old_ti.label_indexes
+        new_ti._label_indexes = old_ti._label_indexes
 
     def _slice(self, from_row_number=None, to_row_number=None) -> 'TensorInstanceNumpy':
         """

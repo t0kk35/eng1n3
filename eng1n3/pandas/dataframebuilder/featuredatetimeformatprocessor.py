@@ -3,7 +3,6 @@ Feature Processor for the creation of FeatureDateTimeFormat features.
 (c) 2023 tsm
 """
 import pandas as pd
-import numpy as np
 from typing import List
 
 from f3atur3s import Feature, FeatureDateTimeFormat

@@ -7,7 +7,7 @@ from typing import Dict, Type, List
 
 from f3atur3s import Feature, FeatureHelper, FeatureSource, FeatureOneHot, FeatureIndex, FeatureBin, FeatureGrouper
 from f3atur3s import FeatureConcat, FeatureExpression, FeatureRatio, FeatureNormalizeScale, FeatureNormalizeStandard
-from f3atur3s import FeatureFilter, FeatureDateTimeFormat
+from f3atur3s import FeatureDateTimeFormat, FeatureLabelBinary
 
 from ..common.exception import EnginePandasException
 
@@ -17,6 +17,7 @@ from .featuregrouperprocessor import FeatureGrouperProcessor
 from .featureonehotprocessor import FeatureOneHotProcessor
 from .featureindexprocessor import FeatureIndexProcessor
 from .featurebinprocessor import FeatureBinProcessor
+from .featurelabelbinaryprocessor import FeatureLabelBinaryProcessor
 from .featureconcatprocessor import FeatureConcatProcessor
 from .featureexpressionprocessor import FeatureExpressionProcessor
 from .featureratioprocessor import FeatureRatioProcessor
@@ -48,6 +49,8 @@ class DataFrameBuilder:
                 FeatureIndexProcessor(self._features, self._inference),
             FeatureBin:
                 FeatureBinProcessor(self._features, self._inference),
+            FeatureLabelBinary:
+                FeatureLabelBinaryProcessor(self._features, self._inference),
             FeatureConcat:
                 FeatureConcatProcessor(self._features, self._inference),
             FeatureExpression:

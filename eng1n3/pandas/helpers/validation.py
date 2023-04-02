@@ -191,7 +191,7 @@ class EnginePandasValidation:
         for td in (target_tensor_def,) if isinstance(target_tensor_def, TensorDefinition) else target_tensor_def:
             if LEARNING_CATEGORY_NONE in [f.learning_category for f in td.features]:
                 raise EnginePandasException(
-                    f'Can not build features with Learning Category None ' +
+                    f'Can not build features with Learning Category <NONE> ' +
                     f'{[f.name for f in td.features if f.learning_category == LEARNING_CATEGORY_NONE]}'
                 )
 
@@ -213,8 +213,9 @@ class EnginePandasValidation:
             rt = list(set([f.type.root_type for f in td.features]))
             if len(rt) > 1:
                 raise EnginePandasException(
-                    f'Found more than one feature root type. {rt} in TensorDefinition {td.name}. ' +
-                    f'This process can only handle features of the same root type, for instance only INT or only FLOAT'
+                    f'Found more than one feature root type. {[r.name for r in rt]} in TensorDefinition {td.name}. ' +
+                    f'This process can only handle features of the same root type, for instance only INTEGER or ' +
+                    f'only FLOAT'
                 )
 
     @staticmethod
