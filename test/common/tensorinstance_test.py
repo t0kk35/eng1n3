@@ -204,6 +204,17 @@ class TestLabelIndex(unittest.TestCase):
         with self.assertRaises(en.TensorInstanceException):
             _ = n.label_indexes
 
+    def test_non_label_target_tensor_def(self):
+        f1 = ft.FeatureSource('f1', ft.FEATURE_TYPE_INT_8)
+        f2 = ft.FeatureLabelBinary('f2', ft.FEATURE_TYPE_INT_8, f1)
+        td1 = ft.TensorDefinition('td1', [f1])
+        td2 = ft.TensorDefinition('td2', [f2])
+        x = np.arange(5)
+        y = np.arange(5)
+        c = (x, y)
+        n = en.TensorInstanceNumpy((td1, td2), c)
+        self.assertTupleEqual(n.non_label_target_tensor_def, (td1,))
+
 
 def main():
     unittest.main()

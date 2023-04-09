@@ -98,6 +98,14 @@ class TensorInstanceNumpy(TensorInstance):
         return self._target_tensor_def
 
     @property
+    def non_label_target_tensor_def(self) -> Tuple[TensorDefinition, ...]:
+        """
+        Property that return all Target TensorDefinition used to build this TensorInstance, except for the
+        TensorDefinition(s) that contain the label information.
+        """
+        return tuple(td for i, td in enumerate(self.target_tensor_def) if i not in self.label_indexes)
+
+    @property
     def numpy_lists(self) -> Tuple[np.ndarray, ...]:
         """
         Property that returns all the numpy ndarray in this TensorInstance
