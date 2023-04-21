@@ -21,14 +21,15 @@ class EngineContext(ABC):
     Base class for engine creation. Implemented a context for future use. All engines will be implemented a context
     in order to be able to provide data and create/keep/destroy connections and resources.
     """
-    def __init__(self):
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s.%(msecs)03d %(trunc_name)-30s %(levelname)-8s %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
-        # Override the LogRecordFactory with a truncating version
-        logging.setLogRecordFactory(self.log_record_factory)
-        logger = logging.getLogger(__name__)
-        logger.info('Start Engine...')
+    def __init__(self, no_logging=False):
+        if not no_logging:
+            logging.basicConfig(level=logging.INFO,
+                                format='%(asctime)s.%(msecs)03d %(trunc_name)-30s %(levelname)-8s %(message)s',
+                                datefmt='%Y-%m-%d %H:%M:%S')
+            # Override the LogRecordFactory with a truncating version
+            logging.setLogRecordFactory(self.log_record_factory)
+            logger = logging.getLogger(__name__)
+            logger.info('Start Engine...')
 
     def __enter__(self) -> 'EngineContext':
         return self

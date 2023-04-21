@@ -29,8 +29,8 @@ class EnginePandas(EngineContext):
         num_threads (int): The maximum number of thread the engine will use during multiprocess processing
 
     """
-    def __init__(self, num_threads: int = None):
-        EngineContext.__init__(self)
+    def __init__(self, num_threads: int = None, no_logging=False):
+        EngineContext.__init__(self, no_logging)
         logger.info(f'Pandas Version : {pd.__version__}')
         logger.info(f'Numpy Version : {np.__version__}')
         self._num_threads = num_threads
