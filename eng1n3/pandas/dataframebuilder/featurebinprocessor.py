@@ -35,7 +35,16 @@ class FeatureBinProcessor(FeatureProcessor[FeatureBin]):
             bins = np.array(feature.bins)
             t = np.dtype(pandas_type(feature))
             labels = np.array(feature.range).astype(np.dtype(t))
-            cut = pd.cut(df[feature.base_feature.name], bins=bins, labels=labels)
-            df[feature.name] = cut.cat.add_categories(0).fillna(0)
+            # Set all values that are smaller than the min bin to the min bin. Otherwise, both amounts lower
+            # than min bin and missing value will become NaN and will be indistinguishable
+            min_adj = np.where(df[feature.base_feature.name] < bins[0], bins[0], df[feature.base_feature.name])
+            cut = pd.cut(min_adj, bins=bins, labels=labels, include_lowest=True)
+            # Add 1 so the 0 bin is reserved for unknown/unseen. Cut will return -1 as code for NaN values.
+            df[feature.name] = cut.codes.astype(np.dtype(t)) + 1
+            # If this point in time we have a 0 index, then the original value was -1, meaning the value was smaller
+            # than the smallest bin. We're going to rid of those, and assign then to the smallest bin,
+            # we really want 0 index to mean; 'missing'.
+            # Now all Nan (missing) become the 0 index.
+            # df[feature.name] = df[feature.name].fillna(0)
 
         return df

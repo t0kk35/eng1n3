@@ -21,7 +21,10 @@ class FeatureIndexProcessor(FeatureProcessor[FeatureIndex]):
         # Build a dictionary of mapping values if we are NOT in inference mode.
         if not self.inference:
             for feature in self.features:
-                feature.dictionary = {cat: i + 1 for i, cat in enumerate(df[feature.base_feature.name].unique())}
+                # Make sure to add the unknown/nan element.
+                dct = {'UNK': 0}
+                dct.update({cat: i + 1 for i, cat in enumerate(df[feature.base_feature.name].unique())})
+                feature.dictionary = dct
 
         # Map the dictionary to the panda
         for feature in self.features:
