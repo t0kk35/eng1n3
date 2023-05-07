@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 from f3atur3s import TensorDefinition, LearningCategory, FeatureLabel
 
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 
 class TensorInstanceException(Exception):
@@ -259,6 +259,22 @@ class TensorInstanceNumpy(TensorInstance):
             sliced = tuple([n for n in self.numpy_lists])
         return TensorInstanceNumpy(self.target_tensor_def, sliced)
 
+    def filter_label(self, label: Any) -> 'TensorInstanceNumpy':
+        """
+        Method to filter a specific class from the labels. It can for instance be used to filter Fraud or Non-Fraud
+        Args:
+            label (Any): The label value (class) we want to filter.
+        Returns:
+            New filtered numpy list, filtered on the label value
+        """
+        label_index = self._get_single_label()
+        labels = self.numpy_lists[label_index]
+        if len(labels.shape) == 2:
+            labels = np.squeeze(labels)
+        index = np.where(labels == label)
+        lists = tuple(npl[index] for npl in self.numpy_lists)
+        return TensorInstanceNumpy(self.target_tensor_def, lists)
+
     def _get_learning_categories(self) -> Tuple[LearningCategory, ...]:
         lcs: List[LearningCategory] = []
         for td in self.target_tensor_def:
@@ -321,3 +337,16 @@ class TensorInstanceNumpy(TensorInstance):
                 f'The number of validation <{validation}> + the number of test <{test}> records. Is bigger than the ' +
                 f'Length of the Numpy List <{len(self)}> '
             )
+
+    def _get_single_label(self) -> int:
+        if len(self.label_indexes) < 1:
+            raise TensorInstanceException(
+                f'One of the Tensor Definitions {[td.name for td in self.target_tensor_def]} should have a label ' +
+                f'feature'
+            )
+        elif len(self._label_indexes) > 1:
+            raise TensorInstanceException(
+                f'Operation is only possible if the TensorInstance has a single label TensorDefinition'
+            )
+        else:
+            return self.label_indexes[0]
