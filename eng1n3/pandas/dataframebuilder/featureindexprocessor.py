@@ -21,8 +21,8 @@ class FeatureIndexProcessor(FeatureProcessor[FeatureIndex]):
         # Build a dictionary of mapping values if we are NOT in inference mode.
         if not self.inference:
             for feature in self.features:
-                # Make sure to add the unknown/nan element.
-                dct = {'UNK': 0}
+                # Make sure to add the unknown/nan element. Make it a value that is unlikely to appear in real data.
+                dct = {'*_UNK_*': 0}
                 dct.update({cat: i + 1 for i, cat in enumerate(df[feature.base_feature.name].unique())})
                 feature.dictionary = dct
 
