@@ -23,10 +23,11 @@ class FeatureIndexProcessor(FeatureProcessor[FeatureIndex]):
             for feature in self.features:
                 # Make sure to add the unknown/nan element. Make it a value that is unlikely to appear in real data.
                 dct = {'*_UNK_*': 0}
-                dct.update({cat: i + 1 for i, cat in enumerate(df[feature.base_feature.name].unique())})
+                dct.update({cat: i + 1 for i, cat in enumerate(df[feature.base_feature.name].dropna().unique())})
                 feature.dictionary = dct
 
         # Map the dictionary to the panda
+        kwargs = {}
         for feature in self.features:
             t = np.dtype(pandas_type(feature))
             # Check for int overflow. There could be too many values for the int type.
@@ -37,8 +38,9 @@ class FeatureIndexProcessor(FeatureProcessor[FeatureIndex]):
             if df[feature.base_feature.name].dtype.name == 'category':
                 if 0 not in df[feature.base_feature.name].cat.categories:
                     df[feature.base_feature.name] = df[feature.base_feature.name].cat.add_categories([0])
-            df[feature.name] = df[feature.base_feature.name].map(feature.dictionary).fillna(0).astype(t)
+            kwargs.update({feature.name: df[feature.base_feature.name].map(feature.dictionary).fillna(0).astype(t)})
 
+        df = df.assign(**kwargs)
         return df
 
     @staticmethod

@@ -17,6 +17,7 @@ class FeatureBinProcessor(FeatureProcessor[FeatureBin]):
         super(FeatureBinProcessor, self).__init__(FeatureBin, features, inference)
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        kwargs = {}
         # Add the binning features
         for feature in self.features:
             if not self.inference:
@@ -40,6 +41,7 @@ class FeatureBinProcessor(FeatureProcessor[FeatureBin]):
             min_adj = np.where(df[feature.base_feature.name] < bins[0], bins[0], df[feature.base_feature.name])
             cut = pd.cut(min_adj, bins=bins, labels=labels, include_lowest=True)
             # Add 1 so the 0 bin is reserved for unknown/unseen. Cut will return -1 as code for NaN values.
-            df[feature.name] = cut.codes.astype(np.dtype(t)) + 1
+            kwargs.update({feature.name: cut.codes.astype(np.dtype(t)) + 1})
 
+        df = df.assign(**kwargs)
         return df
