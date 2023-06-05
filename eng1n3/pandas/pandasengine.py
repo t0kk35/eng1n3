@@ -64,32 +64,46 @@ class EnginePandas(EngineContext):
         Returns:
              TensorInstanceNumpy with the Numpy arrays as defined in the target_tensor_def
         """
+        # Run some basic validation
         EnginePandasValidation.val_same_feature_root_type(target_tensor_def)
         EnginePandasValidation.val_all_same_learning_category(target_tensor_def)
         EnginePandasValidation.val_no_none_learning_category(target_tensor_def)
         ttd = (target_tensor_def,) if isinstance(target_tensor_def, TensorDefinition) else target_tensor_def
-        all_features = set([f for td in ttd for f in td.features])
-        if all([isinstance(f, FeatureSeriesBased) for f in all_features]):
-            # Build series (Rank 2 features)
-            EnginePandasValidation.val_one_feature_per_td(target_tensor_def)
-            EnginePandasValidation.val_tds_contain_same_feature_class(target_tensor_def)
-            EnginePandasValidation.val_time_feature_needed_series(time_feature)
-            sp = SeriesBuilder(ttd, inference, self.num_threads)
-            td = TensorDefinition('SeriesLocal', sp.df_features + [time_feature])
-            df = self.df_from_csv(td, file, delimiter, quote, time_feature, inference)
-            x = sp.build(df, time_feature)
-            print(x)
+
+        # Set up a Series processor if there are Series based Features.
+        std = []
+        for td in ttd:
+            if any([isinstance(f, FeatureSeriesBased) for f in td.features]):
+                EnginePandasValidation.val_one_feature_per_td(td)
+                EnginePandasValidation.val_time_feature_needed_series(time_feature)
+                std.append(td)
+
+        if len(std) != 0:
+            sp = SeriesBuilder(tuple(std), inference, self.num_threads)
         else:
-            # Build array (Rank 1 features)
-            tda = TensorDefinition('All_r_1', list(all_features))
-            df = self.df_from_csv(tda, file, delimiter, quote, time_feature, inference)
-            # Make 1 numpy per each TensorDefinition
-            logger.info(f'Converting {tda.name} to {len(ttd)} numpy arrays')
-            tis = tuple([df[td.feature_names].to_numpy() for td in ttd])
-            # Set the rank of each TensorDefinition
-            for ti, td in zip(tis, ttd):
-                td.rank = len(ti.shape)
-            return TensorInstanceNumpy(ttd, tis)
+            sp = None
+
+        # Get all base feature we may need with one read into a Pandas DataFrame
+        all_features = set([f for td in ttd for f in td.features])
+        fts = [f for f in all_features if not isinstance(f, FeatureSeriesBased)]
+        if sp is not None:
+            fts.extend(sp.df_features)
+            fts.append(time_feature)
+        td = TensorDefinition('All_r_1', list(set(fts)))
+        df = self.df_from_csv(td, file, delimiter, quote, time_feature, inference)
+
+        # Now create the numpy lists
+        npl = []
+        for td in ttd:
+            if any(isinstance(f, FeatureSeriesBased) for f in td.features):
+                npl.append(sp.build(td, df, time_feature))
+            else:
+                # The Features should be in the dataframe.
+                n = df[td.feature_names].to_numpy()
+                td.rank = len(n.shape)
+                npl.append(n)
+
+        return TensorInstanceNumpy(ttd, tuple(npl))
 
     def df_from_csv(self, target_tensor_def: TensorDefinition, file: str, delimiter: chr = ',', quote: chr = "'",
                     time_feature: Optional[Feature] = None, inference: bool = True) -> pd.DataFrame:

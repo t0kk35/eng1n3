@@ -25,34 +25,37 @@ logger = logging.getLogger(__name__)
 
 class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
 
-    def get_df_features(self) -> List[Feature]:
-        f_features = FeatureHelper.filter_not_feature(FeatureExpressionSeries, self.features[0].series_features)
+    @property
+    def df_features(self) -> List[Feature]:
+        f_features = FeatureHelper.filter_not_feature(FeatureExpressionSeries, self.feature.series_features)
         # Add all parameter features
         f_features.extend([
-            p for f in FeatureHelper.filter_feature(FeatureExpressionSeries, self.features[0].series_features)
+            p for f in FeatureHelper.filter_feature(FeatureExpressionSeries, self.feature.series_features)
             for p in f.param_features
         ])
-        f_features.append(self.features[0].key_feature)
+        f_features.append(self.feature.key_feature)
         return f_features
 
-    def __init__(self, target_tensor_def: Tuple[TensorDefinition, ...], inference: bool):
-        super(FeatureSeriesStackedProcessor, self).__init__(FeatureSeriesStacked, target_tensor_def, inference)
+    def __init__(self, tensor_definition: TensorDefinition, inference: bool):
+        super(FeatureSeriesStackedProcessor, self).__init__(FeatureSeriesStacked, tensor_definition, inference)
 
     def process(self, df: pd.DataFrame, time_feature: Feature, num_threads: int) -> Tuple[np.ndarray, ...]:
 
-        logger.info(f'Start creating stacked series for Target Tensor Definitions '
-                    f'{[td.name for td in self.target_tensor_def]} using {num_threads} process(es)')
+        logger.info(f'Start creating stacked series for Target Tensor Definition'
+                    f'{self.tensor_definition.name} using {num_threads} process(es)')
 
-        key_feature = self.features[0].key_feature
+        key_feature = self.feature.key_feature
 
         if num_threads == 1:
             df.sort_values(by=[key_feature.name, time_feature.name], ascending=True, inplace=True)
             # Keep the original index. We'll need it to restore the original order of the input data.
             indexes = df.index
-            series = self._process_key_stacked(df, key_feature,  self.features)
+            series = self._process_key_stacked(df, key_feature,  self.feature)
         else:
             # MultiThreaded processing, to be implemented
             # Now stack the data....
+            indexes = df.index
+
             key_function = partial(
                 self._process_key_stacked,
                 time_feature=time_feature,
@@ -64,36 +67,30 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
                 series = [s for keys in series for s in keys]
 
         # Need to sort to get back in the order of the index
-        series = [s[indexes.argsort()] for s in series]
-
-        logger.info(f'Returning series of types {[str(s.dtype) for s in series]}.')
+        series = series[indexes.argsort()]
+        logger.info(f'Returning series of type {str(series.dtype)}.')
         # Turn it into a NumpyList
         # series = NumpyList(series)
         # Don't forget to set the Rank and shape
-        for td, s in zip(self.target_tensor_def, series):
-            td.rank = 3
-            td.shapes = (-1, *s.shape[1:])
-        logger.info(f'Series Shapes={[td.shapes for td in self.target_tensor_def]}')
+        self.tensor_definition.rank = 3
+        self.tensor_definition.shapes = [(-1, *series.shape[1:])]
+        logger.info(f'Series Shape={self.tensor_definition.shapes}')
 
-        return tuple(series)
+        return series
 
     @staticmethod
-    def _process_key_stacked(rows: pd.DataFrame, key_feature: Feature,
-                             features: List[FeatureSeriesStacked]) -> List[np.ndarray]:
+    def _process_key_stacked(rows: pd.DataFrame, key_feature: Feature, s_feature: FeatureSeriesStacked) -> np.ndarray:
 
-        series_features = [f.series_features for f in features]
+        series_features = s_feature.series_features
         # Enrich the series. Run the FeatureSeriesExpression logic. Note this is a list of lists which we flatten
-        sf: List[FeatureExpressionSeries] = [
-            f for fs in [
-                FeatureHelper.filter_feature(FeatureExpressionSeries, f_lst) for f_lst in series_features
-            ] for f in fs
-        ]
+        sf: List[FeatureExpressionSeries] = FeatureHelper.filter_feature(FeatureExpressionSeries, series_features)
+
         for f in sf:
             t = pandas_type(f)
             rows[f.name] = f.expression(rows[[p.name for p in f.param_features]]).astype(t)
 
         # Convert everything to numpy for performance. This creates a numpy per each LC, with all feature of that LC.
-        np_series = tuple([rows[[f.name for f in f.series_features]].to_numpy(pandas_type(f)) for f in features])
+        np_series = rows[[f.name for f in series_features]].to_numpy(pandas_type(s_feature))
 
         same_key = pd.concat((
             pd.Series([True]),
@@ -101,13 +98,12 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
             eq(rows[key_feature.name].iloc[:-1].reset_index(drop=True))
         )).to_numpy()
 
-        np_out = _numba_process_stacked_keys(same_key, np_series, tuple([f.series_depth for f in features]))
+        np_out = _numba_process_stacked_keys(same_key, np_series, s_feature.series_depth)
         return np_out
 
 
 @jit(nopython=True, cache=True)
-def _numba_process_stacked_keys(same_key: np.ndarray, base_values: Tuple[np.ndarray, ...],
-                                windows: Tuple[int, ...]) -> List[np.ndarray]:
+def _numba_process_stacked_keys(same_key: np.ndarray, base_values: np.ndarray, window: int) -> np.ndarray:
     """
     Numba jit-ed function to build stacked series. We're using numba here because we iterate over the entire input.
     There might be a way to vectorize this. But I have not found it.
@@ -117,27 +113,25 @@ def _numba_process_stacked_keys(same_key: np.ndarray, base_values: Tuple[np.ndar
             location contained the same key as the previous row. It is used to reset the profile element to
             zeros.
         base_values: These are the values that need to be stacked. They are the original data-frame in an array format
-        windows: A tuple of numpy array containing the windows for each of the lists (i.e. series depths we
-            want to use).
+        window: Int value containing the window for  the lists (i.e. series depths we want to use).
 
     Returns:
-        A list of numpy arrays.
+        A numpy array containing the series
     """
     # Allocate output structure
-    np_out = [np.zeros((s.shape[0], windows[i], s.shape[1])) for i, s in enumerate(base_values)]
+    np_out = np.zeros((base_values.shape[0], window, base_values.shape[1]), dtype=base_values.dtype)
 
     # Keep a memory for the count of the first records we processed for a given key. We use it to avoid reading into
     # the previous key
     i_key_mem = 0
 
-    for i in range(base_values[0].shape[0]):
+    for i in range(base_values.shape[0]):
         if not same_key[i]:
             i_key_mem = i
-        for j in range(len(np_out)):
-            s = base_values[j][max(i_key_mem, i - windows[j] + 1):i + 1]
-            # Pre-Pad if incomplete. I.e. There were less than length rows before this row.
-            np_out[j][i, :, :] = np.concatenate(
-                (np.zeros((windows[j] - s.shape[0], s.shape[1]), dtype=s.dtype), s)
-            ) if s.shape[0] < windows[j] else s
+        s = base_values[max(i_key_mem, i - window + 1):i + 1]
+        # Pre-Pad if incomplete. I.e. There were less than length rows before this row.
+        np_out[i, :, :] = np.concatenate(
+            (np.zeros((window - s.shape[0], s.shape[1]), dtype=s.dtype), s)
+        ) if s.shape[0] < window else s
 
     return np_out

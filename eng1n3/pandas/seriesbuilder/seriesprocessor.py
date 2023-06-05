@@ -16,28 +16,29 @@ T = TypeVar('T', bound=Feature)
 
 
 class SeriesProcessor(Generic[T], ABC):
-    def __init__(self, cls: Type[T], target_tensor_def: Tuple[TensorDefinition, ...], inference: bool):
-        self._target_tensor_def = target_tensor_def
-        features = [f for td in target_tensor_def for f in td.features]
-        self._features: List[T] = FeatureHelper.filter_feature(cls, features)
+    def __init__(self, cls: Type[T], tensor_definition: TensorDefinition, inference: bool):
+        self._tensor_definition = tensor_definition
+        features = [f for f in tensor_definition.features]
+        self._feature: T = FeatureHelper.filter_feature(cls, features)[0]
         self._inference = inference
 
     @property
-    def target_tensor_def(self) -> Tuple[TensorDefinition, ...]:
-        return self._target_tensor_def
+    def tensor_definition(self) -> TensorDefinition:
+        return self._tensor_definition
 
     @property
-    def features(self) -> List[T]:
-        return self._features
+    def feature(self) -> T:
+        return self._feature
 
     @property
     def inference(self) -> bool:
         return self._inference
 
     @abstractmethod
-    def process(self, df: pd.DataFrame, time_field: Feature, num_threads: int) -> Tuple[np.ndarray, ...]:
+    def process(self, df: pd.DataFrame, time_field: Feature, num_threads: int) -> np.ndarray:
         pass
 
+    @property
     @abstractmethod
-    def get_df_features(self) -> List[Feature]:
+    def df_features(self) -> List[Feature]:
         pass

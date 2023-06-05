@@ -145,8 +145,7 @@ class EnginePandasValidation:
         """
         if time_feature is None:
             raise EnginePandasException(
-                f'There is a FeatureGrouper in the Tensor Definition to create. They need a time field to ' +
-                f' process. Please provide the parameter ''time_feature''.'
+                f'Building a series with need a time field to process. Please provide the parameter ''time_feature''.'
             )
         else:
             if not isinstance(time_feature.type, FeatureTypeTimeBased):
