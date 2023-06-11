@@ -27,6 +27,14 @@ def copy_file_remove_last_line(file, new_file):
             if number < len(lines) - 1:
                 fp.write(line)
 
+def copy_file_keep_last_line_and_header(file, new_file):
+    with open(file, 'r') as fp:
+        lines = fp.readlines()
+    with open(new_file, 'w') as fp:
+        # iterate each line
+        for number, line in enumerate(lines):
+            if number == 0 or number == len(lines) - 1:
+                fp.write(line)
 
 def copy_file_remove_first_line(file, new_file):
     with open(file, 'r') as fp:
@@ -52,7 +60,6 @@ class TestOneHot(unittest.TestCase):
             mcc_c = ['MCC' + '__' + m for m in mcc_v]
             td2 = ft.TensorDefinition('Derived', [fo])
             df = e.df_from_csv(td2, file, inference=False)
-            # x = df.iloc[:, 0].dtype.name
             self.assertEqual(len(df.columns), len(mcc_v), f'Col number must match values {len(df.columns), len(mcc_v)}')
             self.assertListEqual(list(df.columns), mcc_c, f'Names of columns must match values {df.columns}')
             self.assertEqual(df.iloc[:, 0].dtype.name, 'uint8', f'Expecting a uint8 data type')
@@ -194,7 +201,7 @@ class TestOneHot(unittest.TestCase):
 
     def test_with_other_columns(self):
         # Regression Test, there was a bug that when the one-hot processor wanted to add a column seen in non-inference
-        # mode, and that column was not present, then it tried to convert all items in the df to int8.
+        # mode, and that column was not present, then it tried to convert all items/features in the df to int8.
         # Which obviously fails on date and strings and such.
         fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
         fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
@@ -236,6 +243,22 @@ class TestOneHot(unittest.TestCase):
 
         remove_file_if_exists(file2)
 
+    def test_empty_base_feature(self):
+        # Regression test. When there the base feature columns was completely empty, there was an ugly
+        # error in the reshape function, saying the OH column was not present. We are catching that with a
+        # specific error now.
+        fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL)
+        fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
+        file1 = FILES_DIR + 'engine_test_base_comma.csv'
+        file2 = FILES_DIR + 'engine_test_base_comma_keep_only_last_line.csv'
+        remove_file_if_exists(file2)
+        copy_file_keep_last_line_and_header(file1, file2)
+        with en.EnginePandas(num_threads=1) as e:
+            td = ft.TensorDefinition('All', [fo])
+            with self.assertRaises(en.EnginePandasException):
+                _ = e.df_from_csv(td, file2, inference=False)
+
+        remove_file_if_exists(file2)
 
 class TestNP(unittest.TestCase):
     def test_from_np_good(self):

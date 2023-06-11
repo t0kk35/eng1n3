@@ -113,12 +113,59 @@ class TestBaseCreate(unittest.TestCase):
                     self.assertTrue(np.array_equal(
                         c_s_0[i],
                         c_n_0[i - series_len + 1:i + 1]
-                    ), f'Data after padding not correct {c_s_0[i]} {c_n[series_len-i-1:i]}')
+                    ), f'Data after padding not correct {c_s_0[i]} {c_n_0[series_len-i-1:i]}')
                     self.assertTrue(np.array_equal(
                         c_s_1[i],
                         c_n_1[i - series_len + 1:i + 1]
                     ), f'Data after padding not correct {c_s_1[i]} {c_n_1[series_len-i-1:i]}')
 
+    def test_one_hot(self):
+        series_len = 2
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fd = ft.FeatureSource('Date', ft.FEATURE_TYPE_DATE, format_code='%Y%m%d')
+        fr = ft.FeatureSource('Card', ft.FEATURE_TYPE_STRING)
+        fm = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
+        fc = ft.FeatureSource('Country', ft.FEATURE_TYPE_CATEGORICAL, default='NA')
+        fco = ft.FeatureOneHot('Country_oh', ft.FEATURE_TYPE_INT_8, fc)
+        fmo = ft.FeatureOneHot('MCC_oh', ft.FEATURE_TYPE_INT_8, fm)
+        series_ft = [fmo, fco]
+        fs = ft.FeatureSeriesStacked('Stacked_Categorical', ft.FEATURE_TYPE_INT_8, series_ft, series_len, fr)
+        td0 = ft.TensorDefinition('Key', [fr])
+        td1 = ft.TensorDefinition('Original', series_ft)
+        td2 = ft.TensorDefinition('Derived', [fs])
+        with en.EnginePandas(num_threads=1) as e:
+            k = e.df_from_csv(td0, file, inference=False)
+            n = e.np_from_csv(td1, file, inference=False)
+            s = e.np_from_csv(td2, file, time_feature=fd, inference=False)
+
+        self.assertTrue(isinstance(s, en.TensorInstanceNumpy), f'Expecting a TensorNumpyInstance, got type {type(s)}')
+        self.assertEqual(len(s.numpy_lists), 1, f'Expecting length one, got {len(s)}')
+        self.assertEqual(s.numpy_lists[0].dtype, 'int8', f'Should have returned the type of the input features')
+        self.assertEqual(s.numpy_lists[0].shape[1], series_len, f'time dimension not correct. Expecting {series_len}')
+        self.assertEqual(s.numpy_lists[0].shape[2], n.shapes[0][1], f'Feature dimension not correct. {n.shapes[0][1]}')
+        for key in k['Card'].unique():
+            mask = k['Card'] == key
+            c_n = n.numpy_lists[0][mask]
+            c_s = s.numpy_lists[0][mask]
+            for i in range(c_s.shape[0]):
+                if i < series_len:
+                    # Check pre-padding w/zeros
+                    self.assertTrue(np.array_equal(
+                        c_s[i][0:series_len-i-1],
+                        np.zeros((series_len-i-1, n.shapes[0][1]))
+                    ))
+                    self.assertTrue(np.array_equal(
+                        c_s[i][series_len-i-1:],
+                        c_n[0:i+1]
+                    ), f'Data after padding not correct {c_s[i][series_len-i-1:]} {c_n[0:i+1]}')
+                else:
+                    self.assertTrue(np.array_equal(
+                        c_s[i],
+                        c_n[i - series_len + 1:i + 1]
+                    ), f'Data after padding not correct {c_s[i]} {c_n[series_len-i-1:i]}')
+
+        self.assertTrue(td2.inference_ready, f'TensorDefinition should have been ready for inference')
+        self.assertEqual(td2.rank, 3, f'Rank of TensorDefinition should have been 3')
 
 class TestCombined(unittest.TestCase):
     def test_combined_series_non_series(self):

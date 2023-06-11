@@ -7,8 +7,8 @@ import pandas as pd
 from typing import List
 
 from f3atur3s import Feature, FeatureOneHot
-
-from eng1n3.pandas.dataframebuilder.dataframebuilder import FeatureProcessor
+from ..common.exception import EnginePandasException
+from ..dataframebuilder.dataframebuilder import FeatureProcessor
 
 
 class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):
@@ -17,7 +17,6 @@ class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):
         self._one_hot_prefix = one_hot_prefix
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Keep original feature so we can add back later.
         original_df = df[[f.base_feature.name for f in self.features]]
 
         if not self.inference:
@@ -26,6 +25,11 @@ class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):
             df = pd.get_dummies(df, prefix_sep=self._one_hot_prefix, columns=columns)
             for oh in self.features:
                 oh.expand_names = [c for c in df.columns if c.startswith(oh.base_feature.name + self._one_hot_prefix)]
+                if len(oh.expand_names) == 0:
+                    raise EnginePandasException(
+                        f'Did not create any field for OneHot feature {oh.name}. This most is most likely because the' +
+                        f' base feature {oh.base_feature.name} is always empty or all Nan'
+                    )
         else:
             # During inference the values might be different. Need to make sure the number of columns matches
             # the training values. Values that were not seen during training will be removed.

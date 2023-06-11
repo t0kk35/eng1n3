@@ -6,19 +6,16 @@ import logging
 
 import pandas as pd
 import numpy as np
-import numba as nb
 from numba import jit
 import multiprocessing as mp
 from functools import partial
 from typing import List, Tuple
 
-from f3atur3s import Feature, FeatureSeriesStacked, FeatureExpressionSeries, TensorDefinition, LearningCategory
-from f3atur3s import FeatureType
+from f3atur3s import Feature, FeatureSeriesStacked, FeatureExpressionSeries, TensorDefinition, FeatureExpander
 from f3atur3s import FeatureHelper
 
 from .seriesprocessor import SeriesProcessor
 from ..common.data import pandas_type
-from ...common.tensorinstance import TensorInstanceNumpy
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +44,11 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
         key_feature = self.feature.key_feature
 
         if num_threads == 1:
-            df.sort_values(by=[key_feature.name, time_feature.name], ascending=True, inplace=True)
+            dfs = df.sort_values(by=[key_feature.name, time_feature.name], ascending=True)
             # Keep the original index. We'll need it to restore the original order of the input data.
-            indexes = df.index
-            series = self._process_key_stacked(df, key_feature,  self.feature)
+            indexes = dfs.index
+            series = self._process_key_stacked(dfs, key_feature,  self.feature)
+            del dfs
         else:
             # MultiThreaded processing, to be implemented
             # Now stack the data....
@@ -89,8 +87,16 @@ class FeatureSeriesStackedProcessor(SeriesProcessor[FeatureSeriesStacked]):
             t = pandas_type(f)
             rows[f.name] = f.expression(rows[[p.name for p in f.param_features]]).astype(t)
 
+        # Get the feature names, make sure to consider expander features
+        series_feature_names = []
+        for f in series_features:
+            if isinstance(f, FeatureExpander):
+                series_feature_names.extend(f.expand_names)
+            else:
+                series_feature_names.append(f.name)
+
         # Convert everything to numpy for performance. This creates a numpy per each LC, with all feature of that LC.
-        np_series = rows[[f.name for f in series_features]].to_numpy(pandas_type(s_feature))
+        np_series = rows[series_feature_names].to_numpy(pandas_type(s_feature))
 
         same_key = pd.concat((
             pd.Series([True]),
