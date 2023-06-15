@@ -12,9 +12,9 @@ from ..dataframebuilder.dataframebuilder import FeatureProcessor
 
 
 class FeatureOneHotProcessor(FeatureProcessor[FeatureOneHot]):
-    def __init__(self, features: List[Feature], one_hot_prefix: str, inference: bool):
+    def __init__(self, features: List[Feature], inference: bool):
         super(FeatureOneHotProcessor, self).__init__(FeatureOneHot, features, inference)
-        self._one_hot_prefix = one_hot_prefix
+        self._one_hot_prefix = self.features[0].delimiter if len(self.features) > 0 else None
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         original_df = df[[f.base_feature.name for f in self.features]]

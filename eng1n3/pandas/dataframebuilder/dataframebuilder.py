@@ -7,7 +7,7 @@ from typing import Dict, Type, List
 
 from f3atur3s import Feature, FeatureHelper, FeatureSource, FeatureOneHot, FeatureIndex, FeatureBin, FeatureGrouper
 from f3atur3s import FeatureConcat, FeatureExpression, FeatureRatio, FeatureNormalizeScale, FeatureNormalizeStandard
-from f3atur3s import FeatureDateTimeFormat, FeatureLabelBinary
+from f3atur3s import FeatureDateTimeFormat, FeatureLabelBinary, FeatureDateTimeWave
 
 from ..common.exception import EnginePandasException
 
@@ -24,16 +24,17 @@ from .featureratioprocessor import FeatureRatioProcessor
 from .featurenormalizescaleprocessor import FeatureNormalizeScaleProcessor
 from .featurenormalizestandardprocessor import FeatureNormalizeStandardProcessor
 from .featuredatetimeformatprocessor import FeatureDateTimeFormatProcessor
+from .featuredatetimewaveprocessor import FeatureDateTimeWaveProcessor
+
 
 class DataFrameBuilder:
     def __init__(self, features: List[Feature], file: str, delimiter: chr, quote: chr, num_threads: int,
-                 one_hot_prefix: str, time_feature: Feature, inference: bool):
+                 time_feature: Feature, inference: bool):
         self._features = features
         self._file = file
         self._delimiter = delimiter
         self._quote = quote
         self._num_threads = num_threads
-        self._one_hot_prefix = one_hot_prefix
         self._time_feature = time_feature
         self._inference = inference
         self._feature_processors = self._register_processors()
@@ -44,7 +45,7 @@ class DataFrameBuilder:
             FeatureSource:
                 FeatureSourceProcessor(self._features, self._file, self._delimiter, self._quote, self._inference),
             FeatureOneHot:
-                FeatureOneHotProcessor(self._features, self._one_hot_prefix, self._inference),
+                FeatureOneHotProcessor(self._features, self._inference),
             FeatureIndex:
                 FeatureIndexProcessor(self._features, self._inference),
             FeatureBin:
@@ -64,7 +65,9 @@ class DataFrameBuilder:
             FeatureGrouper:
                 FeatureGrouperProcessor(self._features, self._num_threads, self._time_feature, self._inference),
             FeatureDateTimeFormat:
-                FeatureDateTimeFormatProcessor(self._features, self._inference)
+                FeatureDateTimeFormatProcessor(self._features, self._inference),
+            FeatureDateTimeWave:
+                FeatureDateTimeWaveProcessor(self._features, self._inference)
         }
 
     @staticmethod

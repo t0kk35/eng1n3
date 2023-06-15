@@ -154,9 +154,7 @@ class EnginePandas(EngineContext):
             ready_to_build = [f for f in need_to_build if all(ef in built_features for ef in f.embedded_features)]
             ready_to_build = list(set(ready_to_build))
             # Start processing using the DataFrameBuilder helper class.
-            dfb = DataFrameBuilder(
-                ready_to_build, file, delimiter, quote, self.num_threads, self.one_hot_prefix, time_feature, inference
-            )
+            dfb = DataFrameBuilder(ready_to_build, file, delimiter, quote, self.num_threads, time_feature, inference)
             df = dfb.build(df)
             built_features = built_features + ready_to_build
             need_to_build = [f for f in need_to_build if f not in built_features]

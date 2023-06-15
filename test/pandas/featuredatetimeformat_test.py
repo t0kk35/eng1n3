@@ -1,6 +1,6 @@
 """
-Unit Tests for PandasNumpy Engine, specifically the FeatureBin usage
-(c) 2020 d373c7
+Unit Tests for PandasNumpy Engine, specifically the FeatureDateTimeFormat usage
+(c) 2023 tsm
 """
 import unittest
 

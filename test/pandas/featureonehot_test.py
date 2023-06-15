@@ -27,6 +27,7 @@ def copy_file_remove_last_line(file, new_file):
             if number < len(lines) - 1:
                 fp.write(line)
 
+
 def copy_file_keep_last_line_and_header(file, new_file):
     with open(file, 'r') as fp:
         lines = fp.readlines()
@@ -35,6 +36,7 @@ def copy_file_keep_last_line_and_header(file, new_file):
         for number, line in enumerate(lines):
             if number == 0 or number == len(lines) - 1:
                 fp.write(line)
+
 
 def copy_file_remove_first_line(file, new_file):
     with open(file, 'r') as fp:
@@ -135,7 +137,7 @@ class TestOneHot(unittest.TestCase):
             td_c = ft.TensorDefinition('All', [fc])
             df_c = e.df_from_csv(td_c, file2, inference=False)
             mcc_v = df_c['MCC'].unique()
-            mcc_c = ['MCC' + '__' + m for m in mcc_v]
+            mcc_c = ['MCC' + fo.delimiter + m for m in mcc_v]
             td_o = ft.TensorDefinition('OH', [fo])
             _ = e.df_from_csv(td_o, file2, inference=False)
             self.assertEqual(td_o.inference_ready, True, f'The TensorDefinition should be read for inference')
@@ -174,9 +176,9 @@ class TestOneHot(unittest.TestCase):
             td_c = ft.TensorDefinition('All', [fc])
             df_c = e.df_from_csv(td_c, file2, inference=False)
             mcc_v = df_c['MCC'].unique()
-            mcc_c = ['MCC' + '__' + m for m in mcc_v]
+            mcc_c = ['MCC' + fo.delimiter + m for m in mcc_v]
             # Add the default
-            mcc_c.append('MCC' + '__' + fc.default)
+            mcc_c.append('MCC' + fo.delimiter + fc.default)
             td_o = ft.TensorDefinition('OH', [fo])
             _ = e.df_from_csv(td_o, file2, inference=False)
             self.assertEqual(td_o.inference_ready, True, f'The TensorDefinition should be read for inference')
@@ -216,7 +218,7 @@ class TestOneHot(unittest.TestCase):
             td_c = ft.TensorDefinition('All', [fc])
             df_c = e.df_from_csv(td_c, file1, inference=False)
             mcc_v = df_c['MCC'].unique()
-            mcc_c = ['MCC' + '__' + m for m in mcc_v]
+            mcc_c = ['MCC' + fo.delimiter + m for m in mcc_v]
             td_o = ft.TensorDefinition('OH', [fd, fo])
             _ = e.df_from_csv(td_o, file1, inference=False)
             self.assertEqual(td_o.inference_ready, True, f'The TensorDefinition should be read for inference')
@@ -260,6 +262,7 @@ class TestOneHot(unittest.TestCase):
 
         remove_file_if_exists(file2)
 
+
 class TestNP(unittest.TestCase):
     def test_from_np_good(self):
         file = FILES_DIR + 'engine_test_base_comma.csv'
@@ -277,6 +280,19 @@ class TestNP(unittest.TestCase):
         self.assertEqual(td1.rank, td2.rank, f'Expected rank to be the same {td1.rank} {td2.rank}')
 
 # TODO test default should always be included even if not in the file, not sure that is the case at present.
+
+    def test_bin_after_one_hot(self):
+        # Regression test. There was a bug where the one-hot processor removed fields.
+        file1 = FILES_DIR + 'engine_test_base_comma.csv'
+        fc = ft.FeatureSource('MCC', ft.FEATURE_TYPE_CATEGORICAL, default='0000')
+        fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT)
+        fo = ft.FeatureOneHot('MCC_OH', ft.FEATURE_TYPE_INT_8, fc)
+        fb = ft.FeatureBin('Amount_bin', ft.FEATURE_TYPE_INT_8, fa, 20)
+        fg = ft.FeatureOneHot('Amount_oh', ft.FEATURE_TYPE_INT_8, fb)
+        td_o = ft.TensorDefinition('OH', [fo, fg])
+        # We're just checking this does NOT fail.
+        with en.EnginePandas(num_threads=1) as e:
+            _ = e.df_from_csv(td_o, file1, inference=False)
 
 
 def main():
