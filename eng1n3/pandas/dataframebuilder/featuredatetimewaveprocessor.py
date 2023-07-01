@@ -24,8 +24,8 @@ class FeatureDateTimeWaveProcessor(FeatureProcessor[FeatureDateTimeWave]):
         kwargs = {}
         for f in self.features:
             kwargs.update({
-                f'{f.base_feature.name}{f.delimiter}{fn.__name__}{f.delimiter}{fq}': fn(
-                    df[f.base_feature.name].dt.strftime(f.format).astype(np.int) / f.period * math.pow(2, fq+1) * np.pi
+                f'{f.name}{f.delimiter}{fn.__name__}{f.delimiter}{fq}': fn(
+                    df[f.base_feature.name].dt.strftime(f.format).astype(int) / f.period * math.pow(2, fq+1) * np.pi
                 )
                 for fq in range(f.frequencies) for fn in (np.sin, np.cos)
             })

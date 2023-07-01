@@ -28,7 +28,7 @@ class EnginePandasValidation:
         for feature in tensor_def.features:
             if isinstance(feature, FeatureExpander):
                 names = [name for name in df.columns
-                         if name.startswith(feature.base_feature.name + feature.delimiter)]
+                         if name in feature.expand_names]
             else:
                 names = [name for name in df.columns if name == feature.name]
             if len(names) == 0:
