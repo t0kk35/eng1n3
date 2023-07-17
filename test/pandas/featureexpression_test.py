@@ -29,6 +29,10 @@ def test_date_expr(x: int) -> datetime:
     return y
 
 
+def test_add_expr(parm1: int, parm2: int):
+    return parm1 + parm2
+
+
 class TestFeatureExpression(unittest.TestCase):
     """Test cases for Expression Feature"""
     def test_expr_lambda_float(self):
@@ -109,6 +113,33 @@ class TestFeatureExpression(unittest.TestCase):
         self.assertListEqual(
             sorted(td2.embedded_features, key=lambda x: x.name),
             sorted([fe, fd], key=lambda x: x.name), f'Embedded features should be fe and fd'
+        )
+
+    def test_multiple_param(self):
+        file = FILES_DIR + 'engine_test_base_comma.csv'
+        fe_name = 'AddAmountToAmount'
+        fa = ft.FeatureSource('Amount', ft.FEATURE_TYPE_FLOAT_32)
+        fe = ft.FeatureExpression(fe_name, ft.FEATURE_TYPE_FLOAT_32, test_add_expr, [fa, fa])
+        td1 = ft.TensorDefinition('base', [fa])
+        td2 = ft.TensorDefinition('derived', [fe])
+        with en.EnginePandas(num_threads=1) as e:
+            df1 = e.df_from_csv(td1, file, inference=False)
+            df2 = e.df_from_csv(td2, file, inference=False)
+        df1['Amount'] = df1['Amount'] + df1['Amount']
+        self.assertTrue(df1['Amount'].equals(df2['AddAmountToAmount']), f'Amounts should have been equal')
+        self.assertEqual(df2.columns[0], fe_name, f'Column name incorrect. Got {df1.columns[0]}')
+        self.assertEqual(df2.iloc[:, 0].dtype.name, 'float32', f'Expecting a object data type')
+        self.assertEqual(fe.learning_category, ft.LEARNING_CATEGORY_CONTINUOUS, f'Expecting None LC')
+        self.assertEqual(fe.inference_ready, True, f'Expression feature should be ready for inference')
+        self.assertEqual(len(fe.embedded_features), 1, f'Expecting 1 embedded ft. Got {len(fe.embedded_features)}')
+        self.assertEqual(fe.embedded_features[0], fa, 'Embedded feature should be the original source feature')
+        self.assertEqual(td2.inference_ready, True, f'Tensor should still be ready for inference')
+        self.assertEqual(td2.rank, 2, f'This should have been a rank 2 tensor. Got {td2.rank}')
+        self.assertListEqual(td2.continuous_features(), [fe], f'Expanded Feature not correct')
+        self.assertEqual(len(td2.embedded_features), 2, f'Expecting 2 embedded feats {len(td2.embedded_features)}')
+        self.assertListEqual(
+            sorted(td2.embedded_features, key=lambda x: x.name),
+            sorted([fa, fe], key=lambda x: x.name), f'Embedded features should be fa and fe'
         )
 
 

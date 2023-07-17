@@ -21,7 +21,8 @@ class FeatureExpressionProcessor(FeatureProcessor[FeatureExpression]):
         # to Native vectorization and faster than apply.
         kwargs = {
             f.name:
-                np.vectorize(f.expression, otypes=[pandas_type(f, read=False)])(df[[f.name for f in f.param_features]])
+                np.vectorize(f.expression, otypes=[pandas_type(f, read=False)])
+                (*[df[p.name] for p in f.param_features])
             for f in self.features
         }
         # Apply concatenations
